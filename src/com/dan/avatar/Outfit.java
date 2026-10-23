@@ -80,11 +80,28 @@ public final class Outfit {
             HOOD_DOWN = "Monks_Hood_Down", ROBE = "Monks_Robe", WOOL_PANTS = "pants_wool", CARGO = "cargo_pants",
             SHORTS = "jean_shorts", TSHIRT = "t_shirt_basic_tucked", BOOTS = "boots_ankle", RUBBER_BOOTS = "hero_boots_2",
             SHOES = "mj_shoes", VIKING_TUNIC = "tunicviking", VIKING_PANTS = "pantsviking", VIKING_BOOTS = "bootsviking";
+    // Fassung 1.8: Damenkleidung aus makehuman_system_assets (CC0), über den Dateinamen gefunden (siehe Wardrobe#find)
+    public static final String FEMALE_CASUAL = "female_casualsuit01", FEMALE_CASUAL2 = "female_casualsuit02",
+            FEMALE_ELEGANT = "female_elegantsuit01", FEMALE_SPORT = "female_sportsuit01";
 
     static double[] rgb(double r, double g, double b) { return new double[]{r, g, b}; }
 
     /** Namen der Presets. */
-    public static final String[] PRESETS = {"Strickkapuze", "Regenjacke", "Winter", "Sommer", "1362", "Wikingerzeit", "Alltag", "ohne"};
+    public static final String[] PRESETS = {"Strickkapuze", "Regenjacke", "Winter", "Sommer", "1362", "Wikingerzeit", "Alltag",
+            "Wollkleid", "Damen Alltag", "Damen Freizeit", "Elegant", "Sport", "ohne"};
+
+    /** Liegt jedes Teil dieses Outfits im Schrank (sonst fehlt es im Grundkörper und bleibt unsichtbar)? */
+    public boolean complete(Wardrobe w) {
+        for (Piece p : pieces) if (w.find(p.mesh) == null) return false;
+        return true;
+    }
+
+    /** Die Presets, deren Teile alle im Grundkörper liegen. */
+    public static List<String> available(Wardrobe w) {
+        List<String> l = new ArrayList<>();
+        for (String n : PRESETS) if (preset(n).complete(w)) l.add(n);
+        return l;
+    }
 
     /** Preset nach Namen (siehe {@link #PRESETS}). */
     public static Outfit preset(String name) {
@@ -109,6 +126,16 @@ public final class Outfit {
                         .add(VIKING_BOOTS, Fabric.LEDER);
             case "Alltag":
                 return new Outfit(name).add(CASUAL, null, null);      // wie bis Phase 9 (Textur der Kleidung)
+            case "Wollkleid":    // langes Kleid aus weinroter Wolle (Schnitt der Kutte, ohne Kapuze und Strick), Stiefeletten
+                return new Outfit(name).add(ROBE, Fabric.WOLLE, rgb(0.22, 0.035, 0.05)).add(BOOTS, Fabric.LEDER);
+            case "Damen Alltag": // ab Fassung 1.8 des Grundkörpers, mit der Textur der Kleidung
+                return new Outfit(name).add(FEMALE_CASUAL, null, null);
+            case "Damen Freizeit":
+                return new Outfit(name).add(FEMALE_CASUAL2, null, null);
+            case "Elegant":
+                return new Outfit(name).add(FEMALE_ELEGANT, null, null);
+            case "Sport":
+                return new Outfit(name).add(FEMALE_SPORT, null, null);
             default:
                 return new Outfit("ohne");
         }

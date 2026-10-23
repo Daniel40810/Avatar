@@ -39,7 +39,7 @@ Gleiche Eingaben -> gleiche Datei. Das Skript nutzt keinen Zufall.
 
 import bpy, bmesh, sys, os, json, hashlib, time, importlib, subprocess, gzip, math
 
-VERSION = "1.7"
+VERSION = "1.8"
 T0 = time.time()
 
 # ---------------------------------------------------------------- Argumente
@@ -257,13 +257,19 @@ EQUIP = [
     ("Hair",      "hair",      ["elvs_reverse_french_braid_bun/elvs_reverse_french_braid_bun.mhclo"]),
     ("Hair",      "hair",      ["short02/short02.mhclo"]),
     ("Hair",      "hair",      ["afro01/afro01.mhclo"]),
-    ("Clothes",   "clothes",   ["male_casualsuit01/male_casualsuit01.mhclo", "female_casualsuit01/female_casualsuit01.mhclo"]),
+    ("Clothes",   "clothes",   ["male_casualsuit01/male_casualsuit01.mhclo"]),
     # Phase 10: Kleiderschrank (nur CC0: shirts01, pants01, shoes01, suits02, hats01)
 ] + [("Clothes", "clothes", [n + "/" + n + ".mhclo"]) for n in [
     "toigo_fisherman_sweater", "donitz_monk_robe_hood", "donitz_monk_robe_hood_down", "donitz_monk_robe",
     "toigo_wool_pants", "cortu_cargo_pants", "cortu_jeans_shorts", "toigo_basic_tucked_t-shirt",
     "toigo_ankle_boots_female", "culturalibre_hero_boots_2", "toigo_mj_cloth_shoes",
-    "rehmanpolanski_viking_tunic", "rehmanpolanski_viking_pants", "rehmanpolanski_viking_boots"]]
+    "rehmanpolanski_viking_tunic", "rehmanpolanski_viking_pants", "rehmanpolanski_viking_boots",
+    # Fassung 1.8: Damenkleidung aus makehuman_system_assets (CC0; fehlt eines, steht es im Protokoll unter "fehlt")
+    "female_casualsuit01", "female_casualsuit02", "female_elegantsuit01", "female_sportsuit01"]]
+
+# Ganze Anzuege mit eigener Textur (wie bis Phase 9): Farbtextur und Normalen bleiben, der Stoff kommt nicht aus dem Shader
+def ganzer_anzug(datei):
+    return "suit0" in datei
 
 # Teile am Kopf folgen auch den Gesichtsreglern; alle anderen Kleider nur den Makros (spart Zeit und Platz)
 KOPF_KLEIDUNG = ("donitz_monk_robe_hood",)
@@ -521,7 +527,7 @@ def build():
     # welche Ziele je Teil angepasst werden: Haar, Augen usw. alle; Kleidung nur Makros, am Kopf auch Gesicht
     eq_filter = {}
     for o, e in zip(equipped, equip_info):
-        if e["art"] != "Clothes" or "casualsuit" in e["datei"]:
+        if e["art"] != "Clothes" or e["datei"] == "male_casualsuit01.mhclo":
             eq_filter[o.name] = None
         else:
             kopf = any(e["datei"].startswith(k + ".") for k in KOPF_KLEIDUNG)
@@ -761,7 +767,7 @@ def build():
     # Kleidung ab Fassung 1.7: nur die Farbtextur (der Stoff kommt aus dem Shader), hoechstens 1024 Bildpunkte
     slim = []
     for o, e in zip(equipped, equip_info):
-        if e["art"] != "Clothes" or "casualsuit" in e["datei"]: continue
+        if e["art"] != "Clothes" or ganzer_anzug(e["datei"]): continue
         for slot in o.material_slots:
             m = slot.material
             if not m or not m.use_nodes: continue

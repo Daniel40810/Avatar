@@ -128,16 +128,26 @@ public final class DbStartdaten {
         KLEIDUNG.put("tunicviking", new String[]{"Tunika (Wikingerzeit)", "OBERTEIL"});
         KLEIDUNG.put("pantsviking", new String[]{"Hose (Wikingerzeit)", "HOSE"});
         KLEIDUNG.put("bootsviking", new String[]{"Wendeschuhe", "SCHUHE"});
+        // ab Fassung 1.8, nach Dateinamen (die Netznamen vergibt die .mhclo)
+        KLEIDUNG.put(Outfit.FEMALE_CASUAL, new String[]{"Damen-Freizeitkleidung", "GANZ"});
+        KLEIDUNG.put(Outfit.FEMALE_CASUAL2, new String[]{"Damen-Freizeitkleidung 2", "GANZ"});
+        KLEIDUNG.put(Outfit.FEMALE_ELEGANT, new String[]{"Elegante Damenkleidung", "GANZ"});
+        KLEIDUNG.put(Outfit.FEMALE_SPORT, new String[]{"Damen-Sportkleidung", "GANZ"});
     }
 
-    static final Map<String, String> OUTFIT_TEXT = Map.of(
-            "Strickkapuze", "Dunkle Wolle mit Kapuze, Wasserperlen auf dem Strick (wie die Vorlage)",
-            "Regenjacke", "Ölzeug (Friesennerz): Kittel und Kapuze gelb, Gummistiefel",
-            "Winter", "Fischerpullover, Wollhose, Stiefeletten",
-            "Sommer", "T-Shirt, Jeansshorts, Stoffschuhe",
-            "1362", "Kutte aus ungefärbter Wolle mit Kapuze, Wendeschuhe",
-            "Wikingerzeit", "Tunika aus Leinen, Hose aus Wolle, Lederschuhe",
-            "Alltag", "Hemd und Jeans (Textur der Kleidung)");
+    static final Map<String, String> OUTFIT_TEXT = Map.ofEntries(
+            Map.entry("Wollkleid", "Langes Kleid aus weinroter Wolle, Stiefeletten"),
+            Map.entry("Damen Alltag", "Damen-Freizeitkleidung (Textur der Kleidung)"),
+            Map.entry("Damen Freizeit", "Damen-Freizeitkleidung, zweite Fassung (Textur der Kleidung)"),
+            Map.entry("Elegant", "Elegante Damenkleidung (Textur der Kleidung)"),
+            Map.entry("Sport", "Damen-Sportkleidung (Textur der Kleidung)"),
+            Map.entry("Strickkapuze", "Dunkle Wolle mit Kapuze, Wasserperlen auf dem Strick (wie die Vorlage)"),
+            Map.entry("Regenjacke", "Ölzeug (Friesennerz): Kittel und Kapuze gelb, Gummistiefel"),
+            Map.entry("Winter", "Fischerpullover, Wollhose, Stiefeletten"),
+            Map.entry("Sommer", "T-Shirt, Jeansshorts, Stoffschuhe"),
+            Map.entry("1362", "Kutte aus ungefärbter Wolle mit Kapuze, Wendeschuhe"),
+            Map.entry("Wikingerzeit", "Tunika aus Leinen, Hose aus Wolle, Lederschuhe"),
+            Map.entry("Alltag", "Hemd und Jeans (Textur der Kleidung)"));
 
     /** Mitgelieferte Personen: Name des Presets, Person, Outfit, Bemerkung. */
     static List<Object[]> presets() {
@@ -221,7 +231,7 @@ public final class DbStartdaten {
         Object kj = com.dan.gltf.Json.parse(new String(GlbInfo.resource(DbStartdaten.class, "/com/dan/avatar/res/avatar_base.kleidung.json"), StandardCharsets.UTF_8));
         for (Object t : com.dan.gltf.Json.arr(kj, "teile")) {
             String netz = com.dan.gltf.Json.str(t, "netz");
-            String[] b = KLEIDUNG.getOrDefault(netz, new String[]{netz, "OBERTEIL"});
+            String[] b = KLEIDUNG.getOrDefault(netz, KLEIDUNG.getOrDefault(com.dan.gltf.Json.str(t, "datei").replace(".mhclo", ""), new String[]{netz, "OBERTEIL"}));
             String liz = com.dan.gltf.Json.str(t, "lizenz").replaceAll("[^A-Za-z0-9 ]", "").trim().replace("CC0", "CC0").toUpperCase(Locale.ROOT).replace(" ", "");
             z.add(zeile("NETZ", netz, "BEZEICHNUNG", b[0], "ART", b[1], "BIT", (int) com.dan.gltf.Json.num(t, "bit", -1),
                     "DATEI", com.dan.gltf.Json.str(t, "datei"), "LIZENZ", liz));
@@ -231,12 +241,13 @@ public final class DbStartdaten {
         z = new ArrayList<>();
         List<Map<String, Object>> zt = new ArrayList<>();
         r = 0;
+        com.dan.avatar.Wardrobe w = com.dan.avatar.Wardrobe.parse(new String(GlbInfo.resource(DbStartdaten.class, "/com/dan/avatar/res/avatar_base.kleidung.json"), StandardCharsets.UTF_8));
         for (String n : Outfit.PRESETS) {
-            if (n.equals("ohne")) continue;
+            if (n.equals("ohne") || !Outfit.preset(n).complete(w)) continue;      // Teile noch nicht im Grundkörper
             z.add(zeile("NAME", n, "BEZEICHNUNG", OUTFIT_TEXT.getOrDefault(n, n), "REIHENFOLGE", ++r));
             int i = 0;
             for (Outfit.Piece p : Outfit.preset(n).pieces)
-                zt.add(zeile("OUTFIT_ID", new Roh("(SELECT ID FROM AV_OUTFIT WHERE NAME = " + q(n) + ")"), "REIHENFOLGE", ++i, "NETZ", p.mesh,
+                zt.add(zeile("OUTFIT_ID", new Roh("(SELECT ID FROM AV_OUTFIT WHERE NAME = " + q(n) + ")"), "REIHENFOLGE", ++i, "NETZ", w.find(p.mesh).mesh,
                         "STOFF", p.fabric == null ? null : p.fabric.name(), "FARBE_R", p.color == null ? null : p.color[0],
                         "FARBE_G", p.color == null ? null : p.color[1], "FARBE_B", p.color == null ? null : p.color[2]));
         }

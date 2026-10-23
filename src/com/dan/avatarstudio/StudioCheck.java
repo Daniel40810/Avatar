@@ -899,6 +899,15 @@ public final class StudioCheck {
         double outL = fLook[0].getOrDefault("arkit.eyeLookOutLeft", 0.0), inR = fLook[0].getOrDefault("arkit.eyeLookInRight", 0.0);
         check(String.format(Locale.GERMANY, "Blick 35° nach links: am Ziel nach %.0f ms, Kopf %.0f° von %.0f°, Augen eyeLookOutLeft %.2f / eyeLookInRight %.2f",
                 tDone[0] * 1000, gh[2], gh[0], outL, inR), tDone[0] > 0 && tDone[0] < 1.0 && gh[2] > 8 && gh[2] < gh[0] && outL > 0.05 && inR > 0.05);
+        // Ziel weit zur Seite: der Kopf dreht nur so weit wie ein Hals; liegt es hinter der Person, schaut sie wieder nach vorn
+        double[] side = {-1};
+        bg.lookAt(new double[]{2.0, 1.6, -0.6});       // gut 105° nach links
+        run(bg, sk, stand, rest, 2.0, f -> side[0] = Math.max(side[0], Math.abs(bg.gazeHead()[2])));
+        double[] back = {-1};
+        bg.lookAt(new double[]{0.5, 1.6, -2.0});       // gut 165° nach links, fast hinter ihr
+        run(bg, sk, stand, rest, 2.0, f -> back[0] = Math.abs(bg.gazeHead()[2]));
+        check(String.format(Locale.GERMANY, "Kopfdrehung begrenzt: Ziel 105° zur Seite, Kopf höchstens %.0f°; Ziel hinter ihr, Kopf wieder %.0f°",
+                side[0], back[0]), side[0] > 45 && side[0] <= 70 && back[0] < 15);
         bg.alive = false;
         bg.lookAt(new double[]{eye0[0] * 0 , 1.62, 0.35});
         Map<String, Double>[] fNear = new Map[1];
@@ -1144,12 +1153,19 @@ public final class StudioCheck {
         check(String.format(Locale.GERMANY, "Kleiderschrank: %d Teile, jedes mit eigenem Bit, alle im Grundkörper", w.items.size()),
                 w.items.size() >= 15 && bits.size() == w.items.size() && inModel && java.util.Collections.max(bits) < 23);
         check("Kleiderschrank: alle Teile CC0 (Lizenz aus der .mhclo)", cc0);
+        // die Damenkleidung (Fassung 1.8) kommt erst mit dem neu gebauten Grundkörper; bis dahin nur ein Hinweis
+        java.util.Set<String> neu = java.util.Set.of(com.dan.avatar.Outfit.FEMALE_CASUAL, com.dan.avatar.Outfit.FEMALE_CASUAL2,
+                com.dan.avatar.Outfit.FEMALE_ELEGANT, com.dan.avatar.Outfit.FEMALE_SPORT);
         boolean presets = true;
-        StringBuilder miss = new StringBuilder();
+        StringBuilder miss = new StringBuilder(), later = new StringBuilder();
         for (String n : com.dan.avatar.Outfit.PRESETS)
             for (com.dan.avatar.Outfit.Piece pc : com.dan.avatar.Outfit.preset(n).pieces)
-                if (w.find(pc.mesh) == null) { presets = false; miss.append(" ").append(pc.mesh); }
-        check("Outfits: jedes Teil der " + com.dan.avatar.Outfit.PRESETS.length + " Presets liegt im Schrank" + miss, presets);
+                if (w.find(pc.mesh) == null) {
+                    if (neu.contains(pc.mesh)) later.append(" ").append(pc.mesh);
+                    else { presets = false; miss.append(" ").append(pc.mesh); }
+                }
+        check("Outfits: jedes Teil der " + com.dan.avatar.Outfit.PRESETS.length + " Presets liegt im Schrank" + miss
+                + (later.length() == 0 ? "" : " · erst nach ant blender-glb (Fassung 1.8):" + later), presets);
         com.dan.avatar.Outfit a = com.dan.avatar.Outfit.preset("Strickkapuze"), r = com.dan.avatar.Outfit.preset("Regenjacke");
         check("Kapuze: Strickkapuze und Regenjacke mit, Sommer ohne", a.hoodUp() && r.hoodUp() && !com.dan.avatar.Outfit.preset("Sommer").hoodUp());
         check("Masken: verschiedene Outfits verdecken verschiedene Teile", w.mask(a) != w.mask(com.dan.avatar.Outfit.preset("Sommer")) && w.mask(com.dan.avatar.Outfit.preset("ohne")) == 0);
