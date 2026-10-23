@@ -70,10 +70,14 @@ public final class Wardrobe {
         return m;
     }
 
-    /** Teil zu einem Schlüssel aus {@link Outfit} (Teil des Netznamens, der längste Treffer). */
+    /**
+     * Teil zu einem Schlüssel aus {@link Outfit}: Netzname, Dateiname ohne {@code .mhclo} (für Teile, deren Netznamen
+     * erst die Blender-Kette kennt) oder Teil des Netznamens (der kürzeste Treffer).
+     */
     public Item find(String key) {
         Item best = null;
         for (Item i : items) if (i.mesh.equals(key)) return i;
+        for (Item i : items) if (i.file.equals(key + ".mhclo")) return i;
         for (Item i : items) if (i.mesh.contains(key) && (best == null || i.mesh.length() < best.mesh.length())) best = i;
         return best;
     }

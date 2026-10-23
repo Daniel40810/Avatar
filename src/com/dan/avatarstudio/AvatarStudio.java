@@ -813,7 +813,7 @@ public final class AvatarStudio {
             hoodUpSel.setEnabled(hasHood);
             hoodUpSel.setSelectedIndex(o.hoodUp() || !hasHood ? 0 : 1);
             oq[0] = false;
-            outL.setText(o.name + " · " + o.pieces.size() + " Teile");
+            outL.setText(o.name + " · " + o.pieces.size() + " Teile" + (o.complete(scene.wardrobe) ? "" : " · fehlt im Grundkörper (ant blender-glb)"));
         };
         java.util.function.Consumer<com.dan.avatar.Outfit> wear = o -> { if (fig[0] != null) { fig[0].outfit = o; outShow.run(); } };
         boolean[] outQuiet = {false};

@@ -16,6 +16,10 @@ oder aus NetBeans / Ant: `ant blender-glb`.
 
 Ergebnis: `avatar_base.glb`, `avatar_base.protokoll.json` (Blender- und MPFB-Version, Pakete, Ecken, Dreiecke, Knochen mit Namen, Morphziele nach Gruppen, Ausstattung, was fehlt, Abweichung der Makro-Mischung gegen MPFB, Quellen und Lizenzen, Prüfsummen, Zeitprotokoll) und `avatar_base.referenz.bin` (fünf Personen, jede Blender-Ecke aller Netze, für den Abgleich mit dem Lader).
 
+## Fassung 1.8: Damenkleidung
+
+Vier Teile mehr aus `makehuman_system_assets` (CC0, auf dem Bau-PC schon installiert): `female_casualsuit01`, `female_casualsuit02`, `female_elegantsuit01`, `female_sportsuit01` (Bits 15–18). Wie `male_casualsuit01` ganze Anzüge mit eigener Textur (Farbe und Normalen bleiben), aber wie die übrige Kleidung nur den Makro-Zielen angepasst. Fehlt eines, steht es im Protokoll unter `fehlt`; das Studio zeigt die Presets „Damen Alltag“, „Damen Freizeit“, „Elegant“ und „Sport“ erst, wenn ihre Teile im Grundkörper liegen. Danach `ant db-startdaten`.
+
 ## Fassung 1.7 (Phase 10): Kleiderschrank
 
 Fünfzehn Kleidungsnetze statt einem, alle **CC0** (Lizenz je Teil aus der `.mhclo` im Protokoll): `male_casualsuit01` (wie bisher), `toigo_fisherman_sweater`, `donitz_monk_robe` mit `donitz_monk_robe_hood` und `_hood_down`, `toigo_wool_pants`, `cortu_cargo_pants`, `cortu_jeans_shorts`, `toigo_basic_tucked_t-shirt`, `toigo_ankle_boots_female`, `culturalibre_hero_boots_2`, `toigo_mj_cloth_shoes`, `rehmanpolanski_viking_tunic`, `_pants`, `_boots`. Dafür sind die CC0-Pakete `suits02`, `masks01` und `hats01` aus `Documents/Assets` installiert. Zwei Kandidaten aus CC0-Paketen tragen in ihrer `.mhclo` AGPL3 (`scailman_semitransparent_water_boots`, `jujube_newsboy_cap`) und bleiben draußen.

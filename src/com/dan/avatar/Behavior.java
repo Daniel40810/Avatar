@@ -106,6 +106,18 @@ public final class Behavior {
     private boolean calibrated;
     /** Reichweite der Augen im Kopf (Grad), aus dem Einmessen; den Rest übernimmt der Kopf. */
     private double rangeYaw = 25, rangePitch = 18;
+    /**
+     * Grenzen des Kopfes gegen den Rumpf (Grad) [G]: Der Hals dreht rund 70–80° zur Seite, ohne Anstrengung eher 60°;
+     * nicken bis 45° nach unten, 35° nach oben. Ab 30° dreht die Brust etwas mit (siehe {@link #additive}).
+     */
+    static final double HEAD_YAW_MAX = 70, HEAD_DOWN_MAX = 45, HEAD_UP_MAX = 35;
+    /**
+     * Liegt das Ziel weiter hinten als {@code LOOK_BACK_ON} (Grad zur Seite), schaut die Person nicht über die
+     * Schulter hinterher, sondern wieder nach vorn; erst unter {@code LOOK_BACK_OFF} sucht sie das Ziel wieder.
+     */
+    static final double LOOK_BACK_ON = 115, LOOK_BACK_OFF = 100;
+    /** Ziel zu weit hinten: Blick nach vorn. */
+    private boolean behind;
     private final double[] eyeMid = {0, 1.62, 0.09};
     /** Zuletzt: Augenwinkel im Kopf (Grad) je Auge {Gier, Nicken}. */
     public final double[][] eyeAngles = new double[2][2];
@@ -178,7 +190,8 @@ public final class Behavior {
             case "blick": {
                 if (sacc || pendingAt >= 0) return false;
                 double[] T = targetAngles();
-                double e = Math.hypot(T[0] + offset[0] - G[0], T[1] + offset[1] - G[1]);
+                double[] w = reachable(new double[]{T[0] + offset[0], T[1] + offset[1]});
+                double e = Math.hypot(w[0] - G[0], w[1] - G[1]);
                 return e < 2 && Math.hypot(Ht[0] - H[0], Ht[1] - H[1]) < 3;
             }
             case "gefuehl": {
@@ -419,6 +432,12 @@ public final class Behavior {
     // ------------------------------------------------------------ Blick
 
     private double[] targetAngles() {
+        if (behind) return angles(new double[]{eyeMid[0], eyeMid[1] - 0.15, eyeMid[2] + 2.0}, eyeMid);
+        return rawTargetAngles();
+    }
+
+    /** Richtung zum Ziel, auch wenn es hinter der Person liegt. */
+    private double[] rawTargetAngles() {
         double[] p;
         switch (look) {
             case CAMERA -> p = camera;
@@ -430,7 +449,10 @@ public final class Behavior {
     }
 
     private void gaze(double dt, boolean live) {
-        double[] T = targetAngles();
+        double back = Math.abs(rawTargetAngles()[0]);
+        if (!behind && back > LOOK_BACK_ON) behind = true;
+        else if (behind && back < LOOK_BACK_OFF) behind = false;
+        double[] T = reachable(targetAngles());
         if (!tInit) { G[0] = T[0]; G[1] = T[1]; Tlast[0] = T[0]; Tlast[1] = T[1]; tInit = true; }
         double jump = Math.hypot(T[0] - Tlast[0], T[1] - Tlast[1]);
         if (!live) {
@@ -442,7 +464,7 @@ public final class Behavior {
         }
         // Fixation und neue Ablage vom Ziel
         if (t >= nextShift) newOffset();
-        double[] want = {T[0] + offset[0], T[1] + offset[1] - pGazeDown * (look == Look.CAMERA ? 0.5 : 1)};
+        double[] want = reachable(new double[]{T[0] + offset[0], T[1] + offset[1] - pGazeDown * (look == Look.CAMERA ? 0.5 : 1)});
         if (sacc) {
             double x = (t - sT0) / sDur;
             if (x >= 1) { sacc = false; sEnd = t; G[0] = sTo[0]; G[1] = sTo[1]; }
@@ -519,7 +541,8 @@ public final class Behavior {
         double ey = 0.8 * rangeYaw, ep = 0.8 * rangePitch;
         if (Math.abs(g[0]) - Math.abs(hy) > ey) hy = Math.signum(g[0]) * (Math.abs(g[0]) - ey);
         if (Math.abs(g[1]) - Math.abs(hp) > ep) hp = Math.signum(g[1]) * (Math.abs(g[1]) - ep);
-        double[] ht = {hy, hp - pHeadDown};
+        // nicht weiter, als ein Hals dreht: weich an die Grenze
+        double[] ht = {soft(hy, HEAD_YAW_MAX), clamp(hp - pHeadDown, -HEAD_DOWN_MAX, HEAD_UP_MAX)};
         Ht[0] = ht[0]; Ht[1] = ht[1];
         if (!live) { H[0] = ht[0]; H[1] = ht[1]; Hv[0] = Hv[1] = 0; return; }
         double w = 2 * Math.PI * 1.1;
@@ -531,6 +554,20 @@ public final class Behavior {
                 Hv[k] += acc * h;
                 H[k] += Hv[k] * h;
             }
+    }
+
+    /** Blickrichtung, die Kopf und Augen zusammen erreichen (Grad) {Gier, Nicken}. */
+    private double[] reachable(double[] g) {
+        g[0] = clamp(g[0], -HEAD_YAW_MAX - rangeYaw, HEAD_YAW_MAX + rangeYaw);
+        g[1] = clamp(g[1], -HEAD_DOWN_MAX - rangePitch, HEAD_UP_MAX + rangePitch);
+        return g;
+    }
+
+    /** Bis 70 % von {@code max} unverändert, darüber weich (tanh) an {@code max} heran. */
+    static double soft(double x, double max) {
+        double a = Math.abs(x), k = 0.7 * max;
+        if (a <= k) return x;
+        return Math.signum(x) * (k + (max - k) * Math.tanh((a - k) / (max - k)));
     }
 
     /** Anteil des Kopfes an einer Blickwendung der Weite {@code a} (Grad) [G]. */
@@ -552,9 +589,14 @@ public final class Behavior {
             nR = 0.35 * nRoll.at(t);
         }
         double yaw = H[0] + nY, pitch = H[1] + nP, roll = pHeadTilt + nR;
-        add.rotate("neck_01", 0, 1, 0, Math.toRadians(0.35 * yaw));
+        // große Wendungen: die Brust dreht mit, 40 % von allem über 30° (bei 70° also 16°, der Hals 54°) [G]
+        double torso = Math.signum(yaw) * 0.4 * Math.max(0, Math.abs(yaw) - 30);
+        add.rotate("spine_02", 0, 1, 0, Math.toRadians(0.4 * torso));
+        add.rotate("spine_03", 0, 1, 0, Math.toRadians(0.6 * torso));
+        double neck = yaw - torso;
+        add.rotate("neck_01", 0, 1, 0, Math.toRadians(0.35 * neck));
         add.rotate("neck_01", 1, 0, 0, Math.toRadians(-0.35 * pitch));
-        add.rotate("head", 0, 1, 0, Math.toRadians(0.65 * yaw));
+        add.rotate("head", 0, 1, 0, Math.toRadians(0.65 * neck));
         add.rotate("head", 1, 0, 0, Math.toRadians(-0.65 * pitch));
         add.rotate("head", 0, 0, 1, Math.toRadians(roll));
         double b = breath();

@@ -99,7 +99,8 @@ final class Dauerlauf {
                             Person p = Person.wuerfeln(rnd.nextInt(1_000_000)).copy();
                             p.hair = Person.HAIR_STYLES[rnd.nextInt(Person.HAIR_STYLES.length)];
                             f.set(p);
-                            f.outfit = com.dan.avatar.Outfit.preset(com.dan.avatar.Outfit.PRESETS[rnd.nextInt(com.dan.avatar.Outfit.PRESETS.length)]);
+                            java.util.List<String> av = com.dan.avatar.Outfit.available(scene.wardrobe);
+                            f.outfit = com.dan.avatar.Outfit.preset(av.get(rnd.nextInt(av.size())));
                             persons++;
                         }
                         // Wetter alle drei Minuten
