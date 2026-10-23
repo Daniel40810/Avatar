@@ -1,5 +1,5 @@
 {
- "fassung": "1.7",
+ "fassung": "1.8",
  "hinweis": "Bit je Kleidungsstueck im Merkmal _VERDECKT des Koerpers",
  "teile": [
   {
@@ -118,6 +118,42 @@
    "bit": 14,
    "lizenz": "CC0",
    "gruppen": []
+  },
+  {
+   "netz": "female_casualsuit01",
+   "datei": "female_casualsuit01.mhclo",
+   "bit": 15,
+   "lizenz": "CC0",
+   "gruppen": [
+    "Delete.female_casualsuit01"
+   ]
+  },
+  {
+   "netz": "female_casualsuit02",
+   "datei": "female_casualsuit02.mhclo",
+   "bit": 16,
+   "lizenz": "CC0",
+   "gruppen": [
+    "Delete.female_casualsuit02"
+   ]
+  },
+  {
+   "netz": "female_elegantsuit01",
+   "datei": "female_elegantsuit01.mhclo",
+   "bit": 17,
+   "lizenz": "CC0",
+   "gruppen": [
+    "Delete.female_elegantsuit01"
+   ]
+  },
+  {
+   "netz": "female_sportsuit01",
+   "datei": "female_sportsuit01.mhclo",
+   "bit": 18,
+   "lizenz": "CC0",
+   "gruppen": [
+    "Delete.female_sportsuit01"
+   ]
   }
  ]
 }

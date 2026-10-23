@@ -1,5 +1,5 @@
 {
-  "werkzeug": "avatar_build.py 1.7",
+  "werkzeug": "avatar_build.py 1.8",
   "blender": "5.2.0 LTS",
   "mpfb": "2.0.18",
   "mpfb_modul": "bl_ext.blender_org.mpfb",
@@ -25,8 +25,8 @@
     "visemes02"
   ],
   "datei": "avatar_base.glb",
-  "sha256": "dd1bd73c8cb46cd588be22a540828aa18ac4a153f190e96b4388e154f32a8790",
-  "bytes": 146909196,
+  "sha256": "9e8791a2724ef25596417929e7bc0b34ba3a1cecae08222bc759e796ffba69cf",
+  "bytes": 179654316,
   "einheit": "Meter, Y oben (glTF), Fuesse auf y = 0",
   "netz": {
     "ecken_blender": 13380,
@@ -48,7 +48,7 @@
     ],
     "morphziele": 258,
     "gelenke": 53,
-    "duenn_besetzt": 1026,
+    "duenn_besetzt": 1120,
     "netze": [
       "base",
       "afro01",
@@ -63,6 +63,10 @@
       "rev_fr_braidbun1",
       "eyebrow001",
       "eyelashes01",
+      "female_casualsuit01",
+      "female_casualsuit02",
+      "female_elegantsuit01",
+      "female_sportsuit01",
       "high-poly",
       "long01",
       "male_casualsuit01",
@@ -78,7 +82,7 @@
       "pants_wool",
       "tongue01"
     ],
-    "bilder": 25
+    "bilder": 33
   },
   "rig": {
     "name": "game_engine",
@@ -618,6 +622,38 @@
       "lizenz": "CC0",
       "objekt": "Avatar.rehmanpolanski_viking_boots",
       "netz": "bootsviking"
+    },
+    {
+      "art": "Clothes",
+      "datei": "female_casualsuit01.mhclo",
+      "quelle": "C:\\Users\\Dan40810\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\.user\\blender_org\\mpfb\\data\\clothes\\female_casualsuit01\\female_casualsuit01.mhclo",
+      "lizenz": "CC0",
+      "objekt": "Avatar.female_casualsuit01",
+      "netz": "female_casualsuit01"
+    },
+    {
+      "art": "Clothes",
+      "datei": "female_casualsuit02.mhclo",
+      "quelle": "C:\\Users\\Dan40810\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\.user\\blender_org\\mpfb\\data\\clothes\\female_casualsuit02\\female_casualsuit02.mhclo",
+      "lizenz": "CC0",
+      "objekt": "Avatar.female_casualsuit02",
+      "netz": "female_casualsuit02"
+    },
+    {
+      "art": "Clothes",
+      "datei": "female_elegantsuit01.mhclo",
+      "quelle": "C:\\Users\\Dan40810\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\.user\\blender_org\\mpfb\\data\\clothes\\female_elegantsuit01\\female_elegantsuit01.mhclo",
+      "lizenz": "CC0",
+      "objekt": "Avatar.female_elegantsuit01",
+      "netz": "female_elegantsuit01"
+    },
+    {
+      "art": "Clothes",
+      "datei": "female_sportsuit01.mhclo",
+      "quelle": "C:\\Users\\Dan40810\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\.user\\blender_org\\mpfb\\data\\clothes\\female_sportsuit01\\female_sportsuit01.mhclo",
+      "lizenz": "CC0",
+      "objekt": "Avatar.female_sportsuit01",
+      "netz": "female_sportsuit01"
     }
   ],
   "linearisierung": [
@@ -672,7 +708,7 @@
   },
   "referenz": {
     "datei": "avatar_base.referenz.bin",
-    "sha256": "87897a4cccb76117b96a16ca6036612054be41879cd3b5be764942e8a3094720",
+    "sha256": "eb71665229250d54790893d7e64bd9c523177b842e605fef611288ad7a74ebca",
     "format": "float32 LE, je Person je Netz (Reihenfolge 'netze') je Blender-Ecke x, y, z in glTF-Achsen",
     "netze": [
       {
@@ -809,6 +845,26 @@
         "netz": "bootsviking",
         "objekt": "Avatar.rehmanpolanski_viking_boots",
         "ecken": 3196
+      },
+      {
+        "netz": "female_casualsuit01",
+        "objekt": "Avatar.female_casualsuit01",
+        "ecken": 2197
+      },
+      {
+        "netz": "female_casualsuit02",
+        "objekt": "Avatar.female_casualsuit02",
+        "ecken": 2876
+      },
+      {
+        "netz": "female_elegantsuit01",
+        "objekt": "Avatar.female_elegantsuit01",
+        "ecken": 2205
+      },
+      {
+        "netz": "female_sportsuit01",
+        "objekt": "Avatar.female_sportsuit01",
+        "ecken": 1797
       }
     ],
     "personen": [
@@ -1192,39 +1248,52 @@
       "was": "rehmanpolanski_viking_boots.mhclo",
       "lizenz": "CC0",
       "von": "C:\\Users\\Dan40810\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\.user\\blender_org\\mpfb\\data\\clothes\\rehmanpolanski_viking_boots\\rehmanpolanski_viking_boots.mhclo"
+    },
+    {
+      "was": "female_casualsuit01.mhclo",
+      "lizenz": "CC0",
+      "von": "C:\\Users\\Dan40810\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\.user\\blender_org\\mpfb\\data\\clothes\\female_casualsuit01\\female_casualsuit01.mhclo"
+    },
+    {
+      "was": "female_casualsuit02.mhclo",
+      "lizenz": "CC0",
+      "von": "C:\\Users\\Dan40810\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\.user\\blender_org\\mpfb\\data\\clothes\\female_casualsuit02\\female_casualsuit02.mhclo"
+    },
+    {
+      "was": "female_elegantsuit01.mhclo",
+      "lizenz": "CC0",
+      "von": "C:\\Users\\Dan40810\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\.user\\blender_org\\mpfb\\data\\clothes\\female_elegantsuit01\\female_elegantsuit01.mhclo"
+    },
+    {
+      "was": "female_sportsuit01.mhclo",
+      "lizenz": "CC0",
+      "von": "C:\\Users\\Dan40810\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\.user\\blender_org\\mpfb\\data\\clothes\\female_sportsuit01\\female_sportsuit01.mhclo"
     }
   ],
-  "dauer_s": 506.5,
+  "dauer_s": 559.1,
   "protokoll": [
-    "[   0.0 s] Blender 5.2.0 LTS, MPFB 2.0.18 (bl_ext.blender_org.mpfb), Pakete: eyebrows01, eyelashes01, faceunits01, hair01, hats01, makehuman_system_assets, masks01, pants01, shirts01, shoes01, skins01, skins02, suits02, system_clothes_materials01, system_eye_materials01, system_eye_materials02, system_hair_materials01, visemes01, visemes02",
-    "[   0.4 s] Grundnetz: 19158 Ecken (mit Hilfsgeometrie)",
-    "[   2.2 s] Makro-Ecke w/baby",
-    "[   4.2 s] Makro-Ecke w/kind",
-    "[   6.3 s] Makro-Ecke w/jung",
-    "[   8.6 s] Makro-Ecke w/alt",
-    "[  10.5 s] Makro-Ecke m/baby",
-    "[  12.5 s] Makro-Ecke m/kind",
-    "[  14.7 s] Makro-Ecke m/jung",
-    "[  16.7 s] Makro-Ecke m/alt",
-    "[  18.6 s] Makro-Ziele: 125",
-    "[  23.5 s] Makro-Mischung gegen MPFB: Frau, jung max 9.3 mm; Mann, alt max 4.1 mm; Kind max 0.0 mm; Mann, kraeftig max 11.6 mm; Frau, rundlich max 11.6 mm",
-    "[  42.5 s] Gesichtsregler: 66 Ziele",
-    "[  67.4 s] Gesichtsformen: 52 (faceunits01 (ARKit)), Viseme: 15",
-    "[  67.7 s] Rig game_engine: 53 Knochen",
-    "[  75.0 s] Ausstattung: Eyes, Teeth, Tongue, Eyebrows, Eyelashes, Hair, Hair, Hair, Hair, Hair, Hair, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes",
-    "[ 464.2 s] Gelenke folgen den Morphs: 78 Ziele bewegen Gelenke (Rueckweg 0.00e+00 m)",
-    "[ 492.9 s] Ausstattung folgt den Morphs: high-poly 87, teeth_base 61, tongue01 69, eyebrow001 139, eyelashes01 75, bob02 211, long01 120, braid01 118, elvs_reverse_french_braid_bun 80, short02 156, afro01 144, male_casualsuit01 145, toigo_fisherman_sweater 125, donitz_monk_robe_hood 159, donitz_monk_robe_hood_down 116, donitz_monk_robe 125, toigo_wool_pants 101, cortu_cargo_pants 101, cortu_jeans_shorts 101, toigo_basic_tucked_t-shirt 125, toigo_ankle_boots_female 87, culturalibre_hero_boots_2 97, toigo_mj_cloth_shoes 72, rehmanpolanski_viking_tunic 125, rehmanpolanski_viking_pants 101, rehmanpolanski_viking_boots 97 (416.3 s)",
-    "[ 493.8 s] Unter der Kleidung verdeckt: 11072 Ecken, 15 Teile (male_casualsuit01:1, toigo_fisherman_sweater:0, donitz_monk_robe_hood:0, donitz_monk_robe_hood_down:0, donitz_monk_robe:1, toigo_wool_pants:0, cortu_cargo_pants:0, cortu_jeans_shorts:1, toigo_basic_tucked_t-shirt:0, toigo_ankle_boots_female:1, culturalibre_hero_boots_2:1, toigo_mj_cloth_shoes:1, rehmanpolanski_viking_tunic:0, rehmanpolanski_viking_pants:0, rehmanpolanski_viking_boots:0)",
-    "[ 494.2 s] Hilfsgeometrie entfernt: 5778 Ecken, bleiben 13380",
-    "[ 495.3 s] Posen: stehen, sitzen, lehnen, hand_ans_gesicht, unterarm_drehen",
-    "[ 497.4 s] Kleidung: nur Farbtexturen, verkleinert: shirt-knit.png 2048x2048, robe_brown__diffuse.png 4096x4096, Pants_wool.png 2048x2048, cargo_pants_diff.png 2048x2048, jean_shorts_diff.png 2048x2048, T-shirt_basic.png 2048x2048, BootsAnkle.png 2048x2048, MJ-shoes3.png 2048x2048, TUNIC_Viking.png 2048x2048",
-    "[ 504.1 s] Export: C:\\Users\\Dan40810\\Documents\\NetBeansProjects\\Avatar\\build\\glb17\\avatar_base.glb (140.1 MB)",
-    "[ 506.5 s] Zweiter Lauf: C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe -b -P C:\\Users\\Dan40810\\Documents\\NetBeansProjects\\Avatar\\tools\\blender\\avatar_build.py -- --out C:\\Users\\Dan40810\\Documents\\NetBeansProjects\\Avatar\\build\\glb17\\_zweiter_lauf --name avatar_base",
-    "[1014.0 s] Pruefsummen gleich: True"
-  ],
-  "pruefung": {
-    "zweiter_lauf_sha256": "dd1bd73c8cb46cd588be22a540828aa18ac4a153f190e96b4388e154f32a8790",
-    "gleich": true,
-    "rueckgabe": 0
-  }
+    "[   0.4 s] Blender 5.2.0 LTS, MPFB 2.0.18 (bl_ext.blender_org.mpfb), Pakete: eyebrows01, eyelashes01, faceunits01, hair01, hats01, makehuman_system_assets, masks01, pants01, shirts01, shoes01, skins01, skins02, suits02, system_clothes_materials01, system_eye_materials01, system_eye_materials02, system_hair_materials01, visemes01, visemes02",
+    "[   0.9 s] Grundnetz: 19158 Ecken (mit Hilfsgeometrie)",
+    "[   2.7 s] Makro-Ecke w/baby",
+    "[   4.9 s] Makro-Ecke w/kind",
+    "[   7.0 s] Makro-Ecke w/jung",
+    "[   9.1 s] Makro-Ecke w/alt",
+    "[  11.0 s] Makro-Ecke m/baby",
+    "[  13.2 s] Makro-Ecke m/kind",
+    "[  15.3 s] Makro-Ecke m/jung",
+    "[  17.5 s] Makro-Ecke m/alt",
+    "[  19.7 s] Makro-Ziele: 125",
+    "[  24.6 s] Makro-Mischung gegen MPFB: Frau, jung max 9.3 mm; Mann, alt max 4.1 mm; Kind max 0.0 mm; Mann, kraeftig max 11.6 mm; Frau, rundlich max 11.6 mm",
+    "[  43.6 s] Gesichtsregler: 66 Ziele",
+    "[  68.1 s] Gesichtsformen: 52 (faceunits01 (ARKit)), Viseme: 15",
+    "[  68.5 s] Rig game_engine: 53 Knochen",
+    "[  80.8 s] Ausstattung: Eyes, Teeth, Tongue, Eyebrows, Eyelashes, Hair, Hair, Hair, Hair, Hair, Hair, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes, Clothes",
+    "[ 509.5 s] Gelenke folgen den Morphs: 78 Ziele bewegen Gelenke (Rueckweg 0.00e+00 m)",
+    "[ 542.4 s] Ausstattung folgt den Morphs: high-poly 87, teeth_base 61, tongue01 69, eyebrow001 139, eyelashes01 75, bob02 211, long01 120, braid01 118, elvs_reverse_french_braid_bun 80, short02 156, afro01 144, male_casualsuit01 145, toigo_fisherman_sweater 125, donitz_monk_robe_hood 159, donitz_monk_robe_hood_down 116, donitz_monk_robe 125, toigo_wool_pants 101, cortu_cargo_pants 101, cortu_jeans_shorts 101, toigo_basic_tucked_t-shirt 125, toigo_ankle_boots_female 87, culturalibre_hero_boots_2 97, toigo_mj_cloth_shoes 72, rehmanpolanski_viking_tunic 125, rehmanpolanski_viking_pants 101, rehmanpolanski_viking_boots 97, female_casualsuit01 119, female_casualsuit02 119, female_elegantsuit01 119, female_sportsuit01 119 (459.7 s)",
+    "[ 543.5 s] Unter der Kleidung verdeckt: 11072 Ecken, 19 Teile (male_casualsuit01:1, toigo_fisherman_sweater:0, donitz_monk_robe_hood:0, donitz_monk_robe_hood_down:0, donitz_monk_robe:1, toigo_wool_pants:0, cortu_cargo_pants:0, cortu_jeans_shorts:1, toigo_basic_tucked_t-shirt:0, toigo_ankle_boots_female:1, culturalibre_hero_boots_2:1, toigo_mj_cloth_shoes:1, rehmanpolanski_viking_tunic:0, rehmanpolanski_viking_pants:0, rehmanpolanski_viking_boots:0, female_casualsuit01:1, female_casualsuit02:1, female_elegantsuit01:1, female_sportsuit01:1)",
+    "[ 543.9 s] Hilfsgeometrie entfernt: 5778 Ecken, bleiben 13380",
+    "[ 545.0 s] Posen: stehen, sitzen, lehnen, hand_ans_gesicht, unterarm_drehen",
+    "[ 547.1 s] Kleidung: nur Farbtexturen, verkleinert: shirt-knit.png 2048x2048, robe_brown__diffuse.png 4096x4096, Pants_wool.png 2048x2048, cargo_pants_diff.png 2048x2048, jean_shorts_diff.png 2048x2048, T-shirt_basic.png 2048x2048, BootsAnkle.png 2048x2048, MJ-shoes3.png 2048x2048, TUNIC_Viking.png 2048x2048",
+    "[ 556.4 s] Export: C:\\Users\\Dan40810\\Documents\\NetBeansProjects\\Avatar\\src\\com\\dan\\avatar\\res\\avatar_base.glb (171.3 MB)"
+  ]
 }
