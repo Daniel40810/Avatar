@@ -1168,6 +1168,8 @@ public final class AvatarStudio {
         side.add(left(exL));
         side.add(left(ex));
         FComboBox hudSel = new FComboBox(new Object[]{"HUD an", "HUD aus"});
+        scene.hudOn = false;                 // Phase 19: beim Start ohne HUD, hier zuschaltbar
+        hudSel.setSelectedIndex(1);
         hudSel.addActionListener(e -> scene.hudOn = hudSel.getSelectedIndex() == 0);
         side.add(row("Anzeige", hudSel));
         side.add(Box.createVerticalStrut(12));
@@ -1546,7 +1548,7 @@ public final class AvatarStudio {
      * Sichtbarkeit einzelner Zeilen, die das Studio selbst schaltet, bleibt dabei erhalten. Umschalt-Klick klappt alle
      * Blöcke gleich. Offen sind anfangs die Blöcke in {@code open}; der Zustand bleibt in den Einstellungen.
      */
-    /** Programmsymbol in allen Größen (Gesicht im Regen unter der Kapuze, Goldkante wie Lighthouse und Heidelberg). */
+    /** Programmsymbol in allen Größen (das Gesicht aus der Vorlage templates/E_Music.jpg mit Goldkante wie Lighthouse und Heidelberg). */
     static java.util.List<java.awt.Image> iconImages() {
         java.util.List<java.awt.Image> l = new java.util.ArrayList<>();
         for (int sz : new int[]{16, 24, 32, 48, 64, 128, 256}) {

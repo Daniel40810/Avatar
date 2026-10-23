@@ -1595,15 +1595,15 @@ public final class StudioCheck {
                 hits, err * 530, top * 100, grip * 100, dr.strikes), hits >= 8 && hits <= 9 && err < 0.03 && top > 0.12 && grip < 0.06 && dr.strikes >= 7);
         check(String.format(Locale.GERMANY, "Hand nicht im Fell (Phase 19): Fingerspitzen rechts nie darunter (tiefste %.1f mm darüber), beim Schlag höchstens %.1f cm darüber; linke Finger hinter dem Fell (%.1f cm)",
                 fingerMin * 1000, contactGap * 100, leftFront * 100), fingerMin >= -0.0005 && contactGap < 0.02 && leftFront < 0.005);
-        // Programmsymbol (Phase 19): sieben Größen, Goldkante am Rand, dunkles Inneres
+        // Programmsymbol (Phase 19): sieben Größen, Goldkante am Rand, das Gesicht aus E_Music.jpg innen
         java.util.List<java.awt.Image> ic = AvatarStudio.iconImages();
         boolean gold = false, dark = false;
         if (ic.size() == 7 && ic.get(6) instanceof java.awt.image.BufferedImage bi) {
-            java.awt.Color e = new java.awt.Color(bi.getRGB(3, 128), true), m = new java.awt.Color(bi.getRGB(128, 232), true);
+            java.awt.Color e = new java.awt.Color(bi.getRGB(3, 128), true), m = new java.awt.Color(bi.getRGB(128, 128), true);
             gold = e.getAlpha() > 200 && e.getRed() > 140 && e.getRed() > e.getBlue() + 60 && e.getGreen() > e.getBlue() + 30;
-            dark = m.getRed() + m.getGreen() + m.getBlue() < 300;
+            dark = m.getAlpha() == 255 && m.getRed() + m.getGreen() + m.getBlue() > 150;   // Bild im Inneren
         }
-        check("Programmsymbol in " + ic.size() + " Größen mit Goldkante und dunklem Inneren (Phase 19)", ic.size() == 7 && gold && dark);
+        check("Programmsymbol in " + ic.size() + " Größen: Gesicht aus templates/E_Music.jpg mit Goldkante (Phase 19)", ic.size() == 7 && gold && dark);
     }
 
     // ------------------------------------------------------------ Phase 17
