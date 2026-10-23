@@ -1,0 +1,794 @@
+-- =====================================================================================================
+-- Avatar · Datenbank · 03_api.sql
+-- AV_API (F35 A): Person anlegen, würfeln, ableiten, prüfen, Outfit nach Monat, Rolle und Epoche, Gefühl als
+-- Mischung, Anmelden in den Metadaten. AV_KATALOG: die Kataloge zum Lesen. Dazu die Rümpfe der Typen aus 01_typen.sql.
+--
+-- Der Würfel ist derselbe wie in Java (com.dan.avatar.Person.wuerfeln): SplitMix64 auf ganzen Zahlen modulo 2^64,
+-- alle weiteren Rechnungen in BINARY_DOUBLE in derselben Reihenfolge wie in Java, gerundet auf drei Stellen. Gleicher
+-- seed, gleiche Person; die Prüfung vergleicht beide für viele seeds (DbPruefung).
+--
+-- Fehler mit eigenen Nummern: −20801 Regler unbekannt, −20802 Wert außerhalb, −20803 Gefühl unbekannt, −20804 Rolle
+-- oder Epoche unbekannt, −20805 Monat außerhalb, −20806 REGLER ist kein JSON, −20807 Preset unbekannt, −20808 seed
+-- außerhalb, −20809 Metadaten.
+-- Wiederholbar (CREATE OR REPLACE). Dieses Skript löscht nichts.
+-- =====================================================================================================
+
+
+CREATE OR REPLACE PACKAGE AV_API AUTHID DEFINER AS
+
+  -- Ausbaustufe des Schemas (AV_SCHEMA) und Fassung des Personen-Typs
+  C_VERSION       CONSTANT PLS_INTEGER := 1;
+  C_TYP_VERSION   CONSTANT PLS_INTEGER := 1;
+
+  E_REGLER        CONSTANT PLS_INTEGER := -20801;
+  E_BEREICH       CONSTANT PLS_INTEGER := -20802;
+  E_GEFUEHL       CONSTANT PLS_INTEGER := -20803;
+  E_ROLLE         CONSTANT PLS_INTEGER := -20804;
+  E_MONAT         CONSTANT PLS_INTEGER := -20805;
+  E_JSON          CONSTANT PLS_INTEGER := -20806;
+  E_PRESET        CONSTANT PLS_INTEGER := -20807;
+  E_SEED          CONSTANT PLS_INTEGER := -20808;
+  E_METADATEN     CONSTANT PLS_INTEGER := -20809;
+
+  -- Ausbaustufe (AV_SCHEMA)
+  FUNCTION VERSION RETURN NUMBER;
+
+  -- Dieselbe Person wie Person.wuerfeln(seed) in Java (seed als Java-long: −2^63 … 2^63−1)
+  FUNCTION WUERFELN (P_SEED NUMBER) RETURN AV_PERSON_T;
+
+  -- Eine Person aus seed mit Namen, Geschlecht (0 … 1) und Alter (Jahre); ohne seed aus dem Namen
+  FUNCTION NEU (P_NAME VARCHAR2, P_GESCHLECHT NUMBER DEFAULT NULL, P_ALTER_J NUMBER DEFAULT NULL, P_SEED NUMBER DEFAULT NULL) RETURN AV_PERSON_T;
+
+  -- Ableiten: dieselbe Person älter (Person.aelter) und Geschwister (Person.geschwister)
+  FUNCTION AELTER (P_PERSON AV_PERSON_T, P_JAHRE NUMBER) RETURN AV_PERSON_T;
+  FUNCTION GESCHWISTER (P_PERSON AV_PERSON_T, P_SEED NUMBER) RETURN AV_PERSON_T;
+
+  -- Einen Regler setzen (Bereich aus AV_REGLER); „gender“ und „age“ führen GESCHLECHT und ALTER_J mit
+  FUNCTION SETZEN (P_PERSON AV_PERSON_T, P_REGLER VARCHAR2, P_WERT NUMBER) RETURN AV_PERSON_T;
+  FUNCTION SETZEN_TEXT (P_PERSON AV_PERSON_T, P_REGLER VARCHAR2, P_WERT VARCHAR2) RETURN AV_PERSON_T;
+
+  -- NULL, wenn die Person stimmt; sonst die erste Abweichung
+  FUNCTION PRUEFEN (P_PERSON AV_PERSON_T) RETURN VARCHAR2;
+
+  -- Ein Preset (AV_PRESET) als Person
+  FUNCTION PRESET (P_NAME VARCHAR2) RETURN AV_PERSON_T;
+
+  -- Outfit wie Outfit.forMonth: Monat 1–12, Kleiderart (ALLTAG, DRAUSSEN, ARBEIT) oder Rolle aus AV_ROLLE,
+  -- Epoche (HEUTE, MITTELALTER_1362, WIKINGERZEIT; leer: die der Rolle), seed. Ergebnis als JSON:
+  -- {"name":"Winter","teile":[{"netz":"sweater_fisherman","stoff":"STRICK","farbe":[r,g,b]}, …]}
+  FUNCTION OUTFIT (P_MONAT NUMBER, P_ROLLE VARCHAR2 DEFAULT 'ALLTAG', P_EPOCHE VARCHAR2 DEFAULT NULL, P_SEED NUMBER DEFAULT 0) RETURN VARCHAR2;
+
+  -- Gefühl als Mischung der Gesichtsformen (AV_GEFUEHL_FORM) mal Stärke, als JSON:
+  -- {"name":"freudig","valenz":0.8,"erregung":0.45,"formen":{"mouthSmile":0.78, …}}
+  FUNCTION GEFUEHL (P_NAME VARCHAR2, P_STAERKE NUMBER DEFAULT 1) RETURN VARCHAR2;
+
+  -- Metadaten für das Schema der Sitzung (dasselbe wie INSERT INTO USER_AV_METADATA)
+  PROCEDURE ANMELDEN (P_TABELLE VARCHAR2, P_SPALTE VARCHAR2, P_ROLLE VARCHAR2 DEFAULT NULL, P_BEMERKUNG VARCHAR2 DEFAULT NULL);
+  PROCEDURE ABMELDEN (P_TABELLE VARCHAR2, P_SPALTE VARCHAR2);
+
+  -- Protokoll (eigene Transaktion)
+  PROCEDURE LOG (P_TEXT VARCHAR2, P_STUFE VARCHAR2 DEFAULT 'INFO', P_QUELLE VARCHAR2 DEFAULT NULL);
+
+  -- Für die Prüfung: die ersten n Zahlen des Würfels als ganze Zahlen (Person.Rng.nextLong() >>> 11, also next() · 2^53)
+  FUNCTION ZUFALL (P_SEED NUMBER, P_N PLS_INTEGER) RETURN VARCHAR2;
+
+  -- Jahre ↔ Regler „age“ wie Person.ageYears und Person.ageFromYears
+  FUNCTION JAHRE (P_AGE NUMBER) RETURN NUMBER;
+  FUNCTION AGE_AUS_JAHREN (P_JAHRE NUMBER) RETURN NUMBER;
+
+END AV_API;
+/
+
+CREATE OR REPLACE PACKAGE BODY AV_API AS
+
+  -- ---------------------------------------------------------------------------------------------------
+  -- Würfel: SplitMix64 wie Person.Rng (ganze Zahlen ohne Vorzeichen modulo 2^64)
+  -- ---------------------------------------------------------------------------------------------------
+  C64   CONSTANT NUMBER := 18446744073709551616;
+  C32   CONSTANT NUMBER := 4294967296;
+  C_GOLD CONSTANT NUMBER := 11400714819323198485;   -- 0x9E3779B97F4A7C15
+  C_ADD CONSTANT NUMBER := 7146057691288625177;     -- 0x632BE59BD9B4E019
+  C_M1  CONSTANT NUMBER := 13787848793156543929;    -- 0xBF58476D1CE4E5B9
+  C_M2  CONSTANT NUMBER := 10723151780598845931;    -- 0x94D049BB133111EB
+  C_PI  CONSTANT BINARY_DOUBLE := 3.141592653589793D;
+  C_2P53 CONSTANT BINARY_DOUBLE := 9007199254740992D;
+
+  G_S NUMBER;
+
+  TYPE T_NAMEN IS VARRAY(60) OF VARCHAR2(40);
+  -- Die 33 Gesichtsregler in der Reihenfolge von Person.FACE (der Würfel zieht in dieser Reihenfolge)
+  G_FACE CONSTANT T_NAMEN := T_NAMEN(
+    'nose.breite', 'nose.laenge', 'nose.tiefe', 'nose.hoecker', 'nose.spitze', 'nose.nasenloecher', 'nose.hoehe',
+    'mouth.breite', 'mouth.oberlippe', 'mouth.unterlippe', 'mouth.winkel', 'mouth.amorbogen', 'mouth.hoehe',
+    'chin.breite', 'chin.vorstehen', 'chin.hoehe', 'chin.kiefer', 'cheek.knochen', 'cheek.fuelle',
+    'eye.groesse', 'eye.hoehe', 'eye.abstand', 'eye.lidfalte', 'eye.traenensack', 'brow.hoehe', 'brow.winkel',
+    'ear.groesse', 'ear.abstehen', 'forehead.hoehe', 'head.fuelle', 'head.breite', 'head.hoehe', 'neck.breite');
+  -- Die Zahlenregler im JSON in der Reihenfolge von Person.NUMBERS
+  G_NUM CONSTANT T_NAMEN := T_NAMEN(
+    'gender', 'age', 'muscle', 'weight', 'height', 'proportions', 'cupsize', 'firmness',
+    'melanin', 'redness', 'freckles', 'beard', 'pores', 'oil', 'iris', 'hairColor', 'hairRed', 'grey', 'beardLength');
+
+  TYPE T_MAP IS TABLE OF BINARY_DOUBLE INDEX BY VARCHAR2(80);
+  -- Eine Person im Speicher (wie die Felder von com.dan.avatar.Person)
+  TYPE T_P IS RECORD (
+    SEED NUMBER, NAME VARCHAR2(80 CHAR), PRESET VARCHAR2(40 CHAR), HAIR VARCHAR2(20),
+    NUM T_MAP, FACE T_MAP, FORMS T_MAP);
+
+  FUNCTION U64 (X NUMBER) RETURN NUMBER IS
+  BEGIN
+    RETURN MOD(MOD(X, C64) + C64, C64);
+  END;
+
+  FUNCTION MUL (A NUMBER, B NUMBER) RETURN NUMBER IS
+    A0 NUMBER := MOD(A, C32);
+    A1 NUMBER := (A - MOD(A, C32)) / C32;
+    B0 NUMBER := MOD(B, C32);
+    B1 NUMBER := (B - MOD(B, C32)) / C32;
+  BEGIN
+    RETURN MOD(A0 * B0 + MOD(A1 * B0 + A0 * B1, C32) * C32, C64);
+  END;
+
+  FUNCTION XOR64 (A NUMBER, B NUMBER) RETURN NUMBER IS
+  BEGIN
+    RETURN A + B - 2 * BITAND(A, B);
+  END;
+
+  FUNCTION SHR (A NUMBER, K PLS_INTEGER) RETURN NUMBER IS
+    P NUMBER := POWER(2, K);
+  BEGIN
+    RETURN (A - MOD(A, P)) / P;
+  END;
+
+  PROCEDURE RNG_INIT (P_SEED NUMBER) IS
+  BEGIN
+    IF P_SEED IS NULL OR P_SEED <> TRUNC(P_SEED) OR P_SEED < -9223372036854775808 OR P_SEED > 9223372036854775807 THEN
+      RAISE_APPLICATION_ERROR(E_SEED, 'seed muss eine ganze Zahl im Bereich eines Java-long sein: ' || P_SEED);
+    END IF;
+    G_S := MOD(MUL(U64(P_SEED), C_GOLD) + C_ADD, C64);
+  END;
+
+  FUNCTION RNG_LONG RETURN NUMBER IS
+    Z NUMBER;
+  BEGIN
+    G_S := MOD(G_S + C_GOLD, C64);
+    Z := G_S;
+    Z := MUL(XOR64(Z, SHR(Z, 30)), C_M1);
+    Z := MUL(XOR64(Z, SHR(Z, 27)), C_M2);
+    RETURN XOR64(Z, SHR(Z, 31));
+  END;
+
+  FUNCTION RNG_NEXT RETURN BINARY_DOUBLE IS
+  BEGIN
+    RETURN TO_BINARY_DOUBLE(SHR(RNG_LONG, 11)) / C_2P53;
+  END;
+
+  FUNCTION RNG_GAUSS RETURN BINARY_DOUBLE IS
+    U BINARY_DOUBLE := GREATEST(RNG_NEXT, 1E-12D);
+    V BINARY_DOUBLE := RNG_NEXT;
+  BEGIN
+    RETURN SQRT(-2D * LN(U)) * COS(2D * C_PI * V);
+  END;
+
+  FUNCTION ROUND3 (V BINARY_DOUBLE) RETURN BINARY_DOUBLE IS
+  BEGIN
+    RETURN FLOOR(V * 1000D + 0.5D) / 1000D;
+  END;
+
+  FUNCTION CLAMP (V BINARY_DOUBLE, LO BINARY_DOUBLE, HI BINARY_DOUBLE) RETURN BINARY_DOUBLE IS
+  BEGIN
+    RETURN GREATEST(LO, LEAST(HI, V));
+  END;
+
+  FUNCTION AGE_FROM_YEARS (Y BINARY_DOUBLE) RETURN BINARY_DOUBLE IS
+  BEGIN
+    IF Y < 11D THEN RETURN GREATEST(0D, (Y - 1D) / 10D * 0.1875D);
+    ELSIF Y < 25D THEN RETURN 0.1875D + (Y - 11D) / 14D * 0.3125D;
+    ELSE RETURN LEAST(1D, 0.5D + (Y - 25D) / 65D * 0.5D);
+    END IF;
+  END;
+
+  FUNCTION AGE_YEARS (A BINARY_DOUBLE) RETURN BINARY_DOUBLE IS
+  BEGIN
+    IF A < 0.1875D THEN RETURN 1D + A / 0.1875D * 10D;
+    ELSIF A < 0.5D THEN RETURN 11D + (A - 0.1875D) / 0.3125D * 14D;
+    ELSE RETURN 25D + (A - 0.5D) / 0.5D * 65D;
+    END IF;
+  END;
+
+  FUNCTION JAHRE (P_AGE NUMBER) RETURN NUMBER IS
+  BEGIN
+    RETURN ROUND(TO_NUMBER(AGE_YEARS(TO_BINARY_DOUBLE(P_AGE))), 6);
+  END;
+
+  FUNCTION AGE_AUS_JAHREN (P_JAHRE NUMBER) RETURN NUMBER IS
+  BEGIN
+    RETURN ROUND(TO_NUMBER(AGE_FROM_YEARS(TO_BINARY_DOUBLE(P_JAHRE))), 9);
+  END;
+
+  -- Zahl für JSON: die Werte sind auf drei Stellen gerundet, also genau als NUMBER
+  FUNCTION NUM (V BINARY_DOUBLE) RETURN NUMBER IS
+  BEGIN
+    RETURN ROUND(TO_NUMBER(V), 9);
+  END;
+
+  -- Neue Person mit den Vorgaben von new Person()
+  FUNCTION LEER RETURN T_P IS
+    P T_P;
+  BEGIN
+    P.NUM('gender') := 0.5D; P.NUM('age') := 0.5D; P.NUM('muscle') := 0.5D; P.NUM('weight') := 0.5D;
+    P.NUM('height') := 0.5D; P.NUM('proportions') := 0.5D; P.NUM('cupsize') := 0.5D; P.NUM('firmness') := 0.5D;
+    P.NUM('melanin') := 0.25D; P.NUM('redness') := 0.5D; P.NUM('freckles') := 0D; P.NUM('beard') := 0D;
+    P.NUM('pores') := 0.5D; P.NUM('oil') := 0.35D; P.NUM('iris') := 0.6D;
+    P.NUM('hairColor') := 0.6D; P.NUM('hairRed') := 0.1D; P.NUM('grey') := 0D; P.NUM('beardLength') := 0D;
+    P.HAIR := 'bob';
+    P.NAME := '';
+    RETURN P;
+  END;
+
+  -- ---------------------------------------------------------------------------------------------------
+  -- Person ↔ AV_PERSON_T
+  -- ---------------------------------------------------------------------------------------------------
+  FUNCTION ZU_TYP (P T_P) RETURN AV_PERSON_T IS
+    J JSON_OBJECT_T := JSON_OBJECT_T();
+    F JSON_OBJECT_T := JSON_OBJECT_T();
+    M JSON_OBJECT_T := JSON_OBJECT_T();
+    K VARCHAR2(80);
+  BEGIN
+    FOR I IN 1 .. G_NUM.COUNT LOOP
+      J.PUT(G_NUM(I), NUM(P.NUM(G_NUM(I))));
+    END LOOP;
+    J.PUT('hair', P.HAIR);
+    K := P.FACE.FIRST;
+    WHILE K IS NOT NULL LOOP F.PUT(K, NUM(P.FACE(K))); K := P.FACE.NEXT(K); END LOOP;
+    K := P.FORMS.FIRST;
+    WHILE K IS NOT NULL LOOP M.PUT(K, NUM(P.FORMS(K))); K := P.FORMS.NEXT(K); END LOOP;
+    J.PUT('face', F);
+    J.PUT('forms', M);
+    -- ALTER_J wie in Java: Math.round(ageYears() * 10) / 10.0
+    RETURN AV_PERSON_T(P.SEED, C_TYP_VERSION, NUM(P.NUM('gender')), ROUND(TO_NUMBER(FLOOR(AGE_YEARS(P.NUM('age')) * 10D + 0.5D) / 10D), 1),
+                       P.PRESET, SUBSTR(P.NAME, 1, 80), J.TO_STRING);
+  END;
+
+  FUNCTION AUS_TYP (T AV_PERSON_T) RETURN T_P IS
+    P T_P := LEER;
+    J JSON_OBJECT_T;
+    O JSON_OBJECT_T;
+    KS JSON_KEY_LIST;
+  BEGIN
+    IF T IS NULL OR T.REGLER IS NULL THEN
+      RAISE_APPLICATION_ERROR(E_JSON, 'Person ohne REGLER');
+    END IF;
+    BEGIN
+      J := JSON_OBJECT_T.PARSE(T.REGLER);
+    EXCEPTION WHEN OTHERS THEN
+      RAISE_APPLICATION_ERROR(E_JSON, 'REGLER ist kein JSON: ' || SQLERRM);
+    END;
+    P.SEED := T.SEED; P.NAME := T.NAME; P.PRESET := T.PRESET;
+    FOR I IN 1 .. G_NUM.COUNT LOOP
+      IF J.HAS(G_NUM(I)) THEN P.NUM(G_NUM(I)) := TO_BINARY_DOUBLE(J.GET_NUMBER(G_NUM(I))); END IF;
+    END LOOP;
+    IF J.HAS('hair') THEN P.HAIR := J.GET_STRING('hair'); END IF;
+    IF J.HAS('face') THEN
+      O := J.GET_OBJECT('face');
+      KS := O.GET_KEYS;
+      IF KS IS NOT NULL THEN
+        FOR I IN 1 .. KS.COUNT LOOP P.FACE(KS(I)) := TO_BINARY_DOUBLE(O.GET_NUMBER(KS(I))); END LOOP;
+      END IF;
+    END IF;
+    IF J.HAS('forms') THEN
+      O := J.GET_OBJECT('forms');
+      KS := O.GET_KEYS;
+      IF KS IS NOT NULL THEN
+        FOR I IN 1 .. KS.COUNT LOOP P.FORMS(KS(I)) := TO_BINARY_DOUBLE(O.GET_NUMBER(KS(I))); END LOOP;
+      END IF;
+    END IF;
+    RETURN P;
+  END;
+
+  -- ---------------------------------------------------------------------------------------------------
+  -- Würfeln (Person.wuerfeln, Zeile für Zeile)
+  -- ---------------------------------------------------------------------------------------------------
+  FUNCTION WUERFELN_P (P_SEED NUMBER) RETURN T_P IS
+    P T_P := LEER;
+    MANN BOOLEAN;
+    YEARS BINARY_DOUBLE;
+    ALT BINARY_DOUBLE;
+    V BINARY_DOUBLE;
+    SP BINARY_DOUBLE; BT BINARY_DOUBLE; IU BINARY_DOUBLE; HS BINARY_DOUBLE; HC BINARY_DOUBLE; HR BINARY_DOUBLE; BL BINARY_DOUBLE;
+    MEL BINARY_DOUBLE;
+  BEGIN
+    RNG_INIT(P_SEED);
+    P.SEED := P_SEED;
+    MANN := RNG_NEXT < 0.5D;
+    IF MANN THEN P.NUM('gender') := 0.75D + 0.25D * RNG_NEXT; ELSE P.NUM('gender') := 0.25D * RNG_NEXT; END IF;
+    YEARS := 18D + 57D * POWER(RNG_NEXT, 1.3D);
+    P.NUM('age') := AGE_FROM_YEARS(YEARS);
+    ALT := (YEARS - 18D) / 57D;
+    P.NUM('weight') := CLAMP(0.42D + 0.18D * ALT + 0.14D * RNG_GAUSS, 0.15D, 0.95D);
+    P.NUM('muscle') := CLAMP(0.48D + (CASE WHEN MANN THEN 0.08D ELSE -0.04D END) - 0.1D * ALT + 0.14D * RNG_GAUSS, 0.1D, 0.95D);
+    P.NUM('height') := CLAMP(0.5D + 0.16D * RNG_GAUSS, 0.1D, 0.9D);
+    P.NUM('proportions') := CLAMP(0.55D + 0.2D * RNG_GAUSS, 0.15D, 0.95D);
+    IF MANN THEN P.NUM('cupsize') := 0.5D; ELSE P.NUM('cupsize') := CLAMP(0.5D + 0.18D * RNG_GAUSS, 0.15D, 0.9D); END IF;
+    IF MANN THEN P.NUM('firmness') := 0.5D; ELSE P.NUM('firmness') := CLAMP(0.6D - 0.25D * ALT + 0.12D * RNG_GAUSS, 0.1D, 0.9D); END IF;
+    FOR I IN 1 .. G_FACE.COUNT LOOP
+      V := CLAMP(0.28D * RNG_GAUSS, -0.8D, 0.8D);
+      IF ABS(V) > 0.02D THEN P.FACE(G_FACE(I)) := ROUND3(V); END IF;
+    END LOOP;
+    -- Haut
+    MEL := 0.03D + 0.92D * POWER(RNG_NEXT, 1.25D);
+    P.NUM('melanin') := MEL;
+    SP := RNG_NEXT;
+    IF MEL < 0.35D AND SP < 0.35D THEN P.NUM('freckles') := 0.2D + 0.7D * RNG_NEXT; ELSE P.NUM('freckles') := 0.06D * RNG_NEXT; END IF;
+    BT := RNG_NEXT;
+    IF MANN THEN P.NUM('beard') := 0.2D + 0.7D * BT; ELSE P.NUM('beard') := 0D; END IF;
+    P.NUM('redness') := CLAMP(0.5D + 0.14D * RNG_GAUSS, 0.15D, 0.9D);
+    P.NUM('pores') := CLAMP(0.5D + 0.14D * RNG_GAUSS, 0.15D, 0.9D);
+    P.NUM('oil') := CLAMP(0.35D + 0.14D * RNG_GAUSS, 0.05D, 0.85D);
+    -- Augen
+    IU := RNG_NEXT;
+    IF MEL < 0.4D THEN P.NUM('iris') := CLAMP(IU, 0D, 1D); ELSE P.NUM('iris') := CLAMP(0.55D + 0.45D * POWER(IU, 0.6D), 0D, 1D); END IF;
+    P.NUM('iris') := ROUND3(P.NUM('iris'));
+    -- Haare
+    HS := RNG_NEXT;
+    IF MANN THEN
+      P.HAIR := CASE WHEN HS < 0.40D THEN 'kurz' WHEN HS < 0.55D THEN 'glatze' WHEN HS < 0.70D THEN 'locken' WHEN HS < 0.85D THEN 'bob' ELSE 'lang' END;
+    ELSE
+      P.HAIR := CASE WHEN HS < 0.25D THEN 'lang' WHEN HS < 0.42D THEN 'bob' WHEN HS < 0.58D THEN 'zopf' WHEN HS < 0.74D THEN 'dutt' WHEN HS < 0.88D THEN 'locken' ELSE 'kurz' END;
+    END IF;
+    HC := RNG_NEXT;
+    IF MEL > 0.45D THEN P.NUM('hairColor') := ROUND3(CLAMP(0.82D + 0.18D * HC, 0D, 1D)); ELSE P.NUM('hairColor') := ROUND3(CLAMP(0.1D + 0.85D * HC, 0D, 1D)); END IF;
+    HR := RNG_NEXT;
+    IF MEL < 0.3D AND HR < 0.15D THEN P.NUM('hairRed') := ROUND3(0.6D + 0.4D * RNG_NEXT); ELSE P.NUM('hairRed') := ROUND3(0.15D * RNG_NEXT); END IF;
+    P.NUM('grey') := ROUND3(CLAMP((YEARS - 38D) / 40D + 0.15D * RNG_GAUSS, 0D, 0.95D));
+    BL := RNG_NEXT;
+    IF MANN AND BL < 0.45D THEN P.NUM('beardLength') := ROUND3(0.15D + 0.85D * RNG_NEXT); ELSE P.NUM('beardLength') := 0D; END IF;
+    FOR N IN (SELECT COLUMN_VALUE K FROM TABLE(SYS.ODCIVARCHAR2LIST('melanin', 'freckles', 'beard', 'redness', 'pores', 'oil',
+                'gender', 'age', 'weight', 'muscle', 'height', 'proportions', 'cupsize', 'firmness'))) LOOP
+      P.NUM(N.K) := ROUND3(P.NUM(N.K));
+    END LOOP;
+    P.NAME := CASE WHEN MANN THEN 'Mann' ELSE 'Frau' END || ', ' || TO_CHAR(TO_NUMBER(FLOOR(YEARS + 0.5D))) || ' · ' || TO_CHAR(P_SEED);
+    RETURN P;
+  END;
+
+  FUNCTION VERSION RETURN NUMBER IS
+    V NUMBER;
+  BEGIN
+    SELECT MAX(VERSION) INTO V FROM AV_SCHEMA;
+    RETURN V;
+  END;
+
+  FUNCTION WUERFELN (P_SEED NUMBER) RETURN AV_PERSON_T IS
+  BEGIN
+    RETURN ZU_TYP(WUERFELN_P(P_SEED));
+  END;
+
+  FUNCTION NEU (P_NAME VARCHAR2, P_GESCHLECHT NUMBER DEFAULT NULL, P_ALTER_J NUMBER DEFAULT NULL, P_SEED NUMBER DEFAULT NULL) RETURN AV_PERSON_T IS
+    P T_P;
+    S NUMBER := P_SEED;
+  BEGIN
+    IF S IS NULL THEN SELECT ORA_HASH(P_NAME, 4294967295) INTO S FROM DUAL; END IF;
+    P := WUERFELN_P(S);
+    IF P_GESCHLECHT IS NOT NULL THEN
+      IF P_GESCHLECHT < 0 OR P_GESCHLECHT > 1 THEN RAISE_APPLICATION_ERROR(E_BEREICH, 'Geschlecht 0 … 1: ' || P_GESCHLECHT); END IF;
+      P.NUM('gender') := ROUND3(TO_BINARY_DOUBLE(P_GESCHLECHT));
+    END IF;
+    IF P_ALTER_J IS NOT NULL THEN
+      IF P_ALTER_J < 1 OR P_ALTER_J > 90 THEN RAISE_APPLICATION_ERROR(E_BEREICH, 'Alter 1 … 90 Jahre: ' || P_ALTER_J); END IF;
+      P.NUM('age') := ROUND3(AGE_FROM_YEARS(TO_BINARY_DOUBLE(P_ALTER_J)));
+    END IF;
+    IF P_NAME IS NOT NULL THEN P.NAME := P_NAME; END IF;
+    RETURN ZU_TYP(P);
+  END;
+
+  FUNCTION AELTER (P_PERSON AV_PERSON_T, P_JAHRE NUMBER) RETURN AV_PERSON_T IS
+    P T_P := AUS_TYP(P_PERSON);
+    Q T_P;
+    Y0 BINARY_DOUBLE; Y1 BINARY_DOUBLE; D BINARY_DOUBLE;
+  BEGIN
+    Q := P;
+    Y0 := AGE_YEARS(P.NUM('age'));
+    Y1 := CLAMP(Y0 + TO_BINARY_DOUBLE(P_JAHRE), 1D, 90D);
+    D := (Y1 - Y0) / 57D;
+    Q.NUM('age') := ROUND3(AGE_FROM_YEARS(Y1));
+    Q.NUM('weight') := ROUND3(CLAMP(P.NUM('weight') + 0.18D * D, 0.15D, 0.95D));
+    Q.NUM('muscle') := ROUND3(CLAMP(P.NUM('muscle') - 0.1D * D, 0.1D, 0.95D));
+    IF P.NUM('gender') < 0.5D THEN Q.NUM('firmness') := ROUND3(CLAMP(P.NUM('firmness') - 0.25D * D, 0.1D, 0.9D)); END IF;
+    Q.NUM('grey') := ROUND3(CLAMP(P.NUM('grey') + (Y1 - Y0) / 40D, 0D, 0.95D));
+    RETURN ZU_TYP(Q);
+  END;
+
+  FUNCTION GESCHWISTER (P_PERSON AV_PERSON_T, P_SEED NUMBER) RETURN AV_PERSON_T IS
+    P T_P := AUS_TYP(P_PERSON);
+    W T_P := WUERFELN_P(P_SEED);
+    Q T_P;
+    A BINARY_DOUBLE; B BINARY_DOUBLE; V BINARY_DOUBLE;
+  BEGIN
+    Q := W;
+    Q.FACE.DELETE;
+    FOR I IN 1 .. G_FACE.COUNT LOOP
+      A := CASE WHEN P.FACE.EXISTS(G_FACE(I)) THEN P.FACE(G_FACE(I)) ELSE 0D END;
+      B := CASE WHEN W.FACE.EXISTS(G_FACE(I)) THEN W.FACE(G_FACE(I)) ELSE 0D END;
+      V := ROUND3((A + B) / 2D);
+      IF ABS(V) > 0.02D THEN Q.FACE(G_FACE(I)) := V; END IF;
+    END LOOP;
+    Q.NUM('melanin') := ROUND3(0.7D * P.NUM('melanin') + 0.3D * W.NUM('melanin'));
+    Q.NUM('hairColor') := ROUND3(0.7D * P.NUM('hairColor') + 0.3D * W.NUM('hairColor'));
+    Q.NUM('hairRed') := ROUND3(0.7D * P.NUM('hairRed') + 0.3D * W.NUM('hairRed'));
+    Q.NUM('iris') := ROUND3(0.7D * P.NUM('iris') + 0.3D * W.NUM('iris'));
+    Q.NUM('freckles') := ROUND3((P.NUM('freckles') + W.NUM('freckles')) / 2D);
+    Q.NUM('height') := ROUND3((P.NUM('height') + W.NUM('height')) / 2D);
+    Q.NUM('proportions') := ROUND3((P.NUM('proportions') + W.NUM('proportions')) / 2D);
+    Q.NAME := SUBSTR(CASE WHEN W.NUM('gender') >= 0.5D THEN 'Bruder' ELSE 'Schwester' END || ' von ' || P.NAME, 1, 80);
+    Q.PRESET := NULL;
+    RETURN ZU_TYP(Q);
+  END;
+
+  -- Bereich eines Reglers aus AV_REGLER (Gesichtsregler: „face.<name>“)
+  PROCEDURE BEREICH (P_REGLER VARCHAR2, P_MIN OUT NUMBER, P_MAX OUT NUMBER) IS
+  BEGIN
+    SELECT MIN_WERT, MAX_WERT INTO P_MIN, P_MAX FROM AV_REGLER WHERE NAME = P_REGLER;
+  EXCEPTION WHEN NO_DATA_FOUND THEN
+    IF P_REGLER LIKE 'forms.%' THEN P_MIN := 0; P_MAX := 1;
+    ELSE RAISE_APPLICATION_ERROR(E_REGLER, 'Regler unbekannt: ' || P_REGLER);
+    END IF;
+  END;
+
+  FUNCTION SETZEN (P_PERSON AV_PERSON_T, P_REGLER VARCHAR2, P_WERT NUMBER) RETURN AV_PERSON_T IS
+    P T_P := AUS_TYP(P_PERSON);
+    LO NUMBER; HI NUMBER;
+  BEGIN
+    BEREICH(P_REGLER, LO, HI);
+    IF P_WERT IS NULL OR P_WERT < LO OR P_WERT > HI THEN
+      RAISE_APPLICATION_ERROR(E_BEREICH, P_REGLER || ' ' || LO || ' … ' || HI || ': ' || P_WERT);
+    END IF;
+    IF P_REGLER LIKE 'face.%' THEN
+      IF P_WERT = 0 THEN P.FACE.DELETE(SUBSTR(P_REGLER, 6)); ELSE P.FACE(SUBSTR(P_REGLER, 6)) := TO_BINARY_DOUBLE(P_WERT); END IF;
+    ELSIF P_REGLER LIKE 'forms.%' THEN
+      IF P_WERT = 0 THEN P.FORMS.DELETE(SUBSTR(P_REGLER, 7)); ELSE P.FORMS(SUBSTR(P_REGLER, 7)) := TO_BINARY_DOUBLE(P_WERT); END IF;
+    ELSE
+      P.NUM(P_REGLER) := TO_BINARY_DOUBLE(P_WERT);
+    END IF;
+    RETURN ZU_TYP(P);
+  END;
+
+  FUNCTION SETZEN_TEXT (P_PERSON AV_PERSON_T, P_REGLER VARCHAR2, P_WERT VARCHAR2) RETURN AV_PERSON_T IS
+    P T_P := AUS_TYP(P_PERSON);
+    N NUMBER;
+  BEGIN
+    IF P_REGLER = 'hair' THEN
+      SELECT COUNT(*) INTO N FROM AV_FRISUR WHERE NAME = P_WERT;
+      IF N = 0 THEN RAISE_APPLICATION_ERROR(E_BEREICH, 'Frisur unbekannt: ' || P_WERT); END IF;
+      P.HAIR := P_WERT;
+    ELSIF P_REGLER = 'name' THEN
+      P.NAME := P_WERT;
+    ELSE
+      RAISE_APPLICATION_ERROR(E_REGLER, 'kein Textregler: ' || P_REGLER);
+    END IF;
+    RETURN ZU_TYP(P);
+  END;
+
+  FUNCTION PRUEFEN (P_PERSON AV_PERSON_T) RETURN VARCHAR2 IS
+    P T_P;
+    K VARCHAR2(80);
+    LO NUMBER; HI NUMBER; N NUMBER;
+  BEGIN
+    IF P_PERSON IS NULL THEN RETURN 'Person fehlt'; END IF;
+    IF P_PERSON.VERSION IS NULL OR P_PERSON.VERSION > C_TYP_VERSION THEN RETURN 'VERSION ' || P_PERSON.VERSION || ' unbekannt (Typ ' || C_TYP_VERSION || ')'; END IF;
+    BEGIN
+      P := AUS_TYP(P_PERSON);
+    EXCEPTION WHEN OTHERS THEN RETURN SQLERRM;
+    END;
+    FOR I IN 1 .. G_NUM.COUNT LOOP
+      BEGIN
+        BEREICH(G_NUM(I), LO, HI);
+      EXCEPTION WHEN OTHERS THEN RETURN SQLERRM;
+      END;
+      IF P.NUM(G_NUM(I)) < LO OR P.NUM(G_NUM(I)) > HI THEN RETURN G_NUM(I) || ' außerhalb ' || LO || ' … ' || HI || ': ' || NUM(P.NUM(G_NUM(I))); END IF;
+    END LOOP;
+    K := P.FACE.FIRST;
+    WHILE K IS NOT NULL LOOP
+      BEGIN
+        BEREICH('face.' || K, LO, HI);
+      EXCEPTION WHEN OTHERS THEN RETURN 'Gesichtsregler unbekannt: ' || K;
+      END;
+      IF P.FACE(K) < LO OR P.FACE(K) > HI THEN RETURN 'face.' || K || ' außerhalb: ' || NUM(P.FACE(K)); END IF;
+      K := P.FACE.NEXT(K);
+    END LOOP;
+    SELECT COUNT(*) INTO N FROM AV_FRISUR WHERE NAME = P.HAIR;
+    IF N = 0 THEN RETURN 'Frisur unbekannt: ' || P.HAIR; END IF;
+    IF ABS(NVL(P_PERSON.GESCHLECHT, -9) - NUM(P.NUM('gender'))) > 0.0005 THEN RETURN 'GESCHLECHT passt nicht zu gender'; END IF;
+    IF ABS(NVL(P_PERSON.ALTER_J, -9) - TO_NUMBER(AGE_YEARS(P.NUM('age')))) > 0.051 THEN RETURN 'ALTER_J passt nicht zu age'; END IF;
+    RETURN NULL;
+  END;
+
+  FUNCTION PRESET (P_NAME VARCHAR2) RETURN AV_PERSON_T IS
+    T AV_PERSON_T;
+  BEGIN
+    SELECT PERSON INTO T FROM AV_PRESET WHERE NAME = P_NAME;
+    RETURN T;
+  EXCEPTION WHEN NO_DATA_FOUND THEN
+    RAISE_APPLICATION_ERROR(E_PRESET, 'Preset unbekannt: ' || P_NAME);
+  END;
+
+  -- ---------------------------------------------------------------------------------------------------
+  -- Outfit (Outfit.forMonth)
+  -- ---------------------------------------------------------------------------------------------------
+  FUNCTION OUTFIT (P_MONAT NUMBER, P_ROLLE VARCHAR2 DEFAULT 'ALLTAG', P_EPOCHE VARCHAR2 DEFAULT NULL, P_SEED NUMBER DEFAULT 0) RETURN VARCHAR2 IS
+    ART VARCHAR2(10);
+    EPO VARCHAR2(30);
+    WINTER BOOLEAN; SOMMER BOOLEAN;
+    V_NAME VARCHAR2(40);
+    K BINARY_DOUBLE;
+    J JSON_OBJECT_T := JSON_OBJECT_T();
+    A JSON_ARRAY_T := JSON_ARRAY_T();
+    T JSON_OBJECT_T;
+    F JSON_ARRAY_T;
+    N NUMBER;
+    KAPUZE_AB BOOLEAN := FALSE;
+  BEGIN
+    IF P_MONAT IS NULL OR P_MONAT < 1 OR P_MONAT > 12 OR P_MONAT <> TRUNC(P_MONAT) THEN
+      RAISE_APPLICATION_ERROR(E_MONAT, 'Monat 1 … 12: ' || P_MONAT);
+    END IF;
+    -- Rolle: Kleiderart direkt oder eine Rolle aus AV_ROLLE
+    IF UPPER(NVL(P_ROLLE, 'ALLTAG')) IN ('ALLTAG', 'DRAUSSEN', 'ARBEIT') THEN
+      ART := UPPER(NVL(P_ROLLE, 'ALLTAG'));
+      EPO := 'HEUTE';
+    ELSE
+      BEGIN
+        SELECT KLEIDERART, EPOCHE INTO ART, EPO FROM AV_ROLLE WHERE UPPER(NAME) = UPPER(P_ROLLE);
+      EXCEPTION WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(E_ROLLE, 'Rolle unbekannt: ' || P_ROLLE);
+      END;
+    END IF;
+    IF P_EPOCHE IS NOT NULL THEN
+      SELECT COUNT(*) INTO N FROM AV_EPOCHE WHERE NAME = UPPER(P_EPOCHE);
+      IF N = 0 THEN RAISE_APPLICATION_ERROR(E_ROLLE, 'Epoche unbekannt: ' || P_EPOCHE); END IF;
+      EPO := UPPER(P_EPOCHE);
+    END IF;
+    WINTER := P_MONAT = 12 OR P_MONAT <= 2;
+    SOMMER := P_MONAT >= 6 AND P_MONAT <= 8;
+    IF EPO = 'MITTELALTER_1362' THEN
+      V_NAME := '1362';
+      KAPUZE_AB := NOT WINTER AND ART <> 'DRAUSSEN';
+    ELSIF EPO = 'WIKINGERZEIT' THEN
+      V_NAME := 'Wikingerzeit';
+    ELSIF WINTER THEN
+      V_NAME := 'Winter';
+    ELSIF SOMMER THEN
+      V_NAME := CASE WHEN ART = 'ARBEIT' THEN 'Alltag' ELSE 'Sommer' END;
+    ELSE
+      V_NAME := CASE WHEN ART = 'DRAUSSEN' THEN CASE WHEN MOD(U64(P_SEED), 2) = 0 THEN 'Regenjacke' ELSE 'Strickkapuze' END ELSE 'Alltag' END;
+    END IF;
+    -- kleine Abweichung der Farben je Person (±12 % Helligkeit), wie in Java
+    K := 0.88D + 0.24D * (TO_BINARY_DOUBLE(SHR(MUL(U64(P_SEED), C_GOLD), 11)) / C_2P53);
+    J.PUT('name', V_NAME);
+    FOR R IN (SELECT t.NETZ, t.STOFF, t.FARBE_R, t.FARBE_G, t.FARBE_B
+                FROM AV_OUTFIT o JOIN AV_OUTFIT_TEIL t ON t.OUTFIT_ID = o.ID
+               WHERE o.NAME = V_NAME ORDER BY t.REIHENFOLGE) LOOP
+      IF KAPUZE_AB AND R.NETZ = 'Monks_Hood' THEN CONTINUE; END IF;
+      T := JSON_OBJECT_T();
+      T.PUT('netz', R.NETZ);
+      IF R.STOFF IS NULL THEN T.PUT_NULL('stoff'); ELSE T.PUT('stoff', R.STOFF); END IF;
+      IF R.FARBE_R IS NULL THEN T.PUT_NULL('farbe');
+      ELSE
+        F := JSON_ARRAY_T();
+        F.APPEND(ROUND(TO_NUMBER(TO_BINARY_DOUBLE(R.FARBE_R) * K), 12));
+        F.APPEND(ROUND(TO_NUMBER(TO_BINARY_DOUBLE(R.FARBE_G) * K), 12));
+        F.APPEND(ROUND(TO_NUMBER(TO_BINARY_DOUBLE(R.FARBE_B) * K), 12));
+        T.PUT('farbe', F);
+      END IF;
+      A.APPEND(T);
+    END LOOP;
+    IF KAPUZE_AB THEN
+      -- wie Java: die Kapuze der Kutte liegt dann im Nacken (Monks_Hood_Down, Wolle, ungefärbt) und kommt zuletzt
+      T := JSON_OBJECT_T();
+      T.PUT('netz', 'Monks_Hood_Down');
+      T.PUT('stoff', 'WOLLE');
+      F := JSON_ARRAY_T();
+      F.APPEND(ROUND(TO_NUMBER(0.20D * K), 12));
+      F.APPEND(ROUND(TO_NUMBER(0.16D * K), 12));
+      F.APPEND(ROUND(TO_NUMBER(0.11D * K), 12));
+      T.PUT('farbe', F);
+      A.APPEND(T);
+    END IF;
+    J.PUT('teile', A);
+    RETURN J.TO_STRING;
+  END;
+
+  FUNCTION GEFUEHL (P_NAME VARCHAR2, P_STAERKE NUMBER DEFAULT 1) RETURN VARCHAR2 IS
+    J JSON_OBJECT_T := JSON_OBJECT_T();
+    F JSON_OBJECT_T := JSON_OBJECT_T();
+    G AV_GEFUEHL%ROWTYPE;
+  BEGIN
+    BEGIN
+      SELECT * INTO G FROM AV_GEFUEHL WHERE NAME = P_NAME;
+    EXCEPTION WHEN NO_DATA_FOUND THEN
+      RAISE_APPLICATION_ERROR(E_GEFUEHL, 'Gefühl unbekannt: ' || P_NAME);
+    END;
+    J.PUT('name', G.NAME);
+    J.PUT('valenz', G.VALENZ);
+    J.PUT('erregung', G.ERREGUNG);
+    J.PUT('staerke', NVL(P_STAERKE, 1));
+    FOR R IN (SELECT FORM, GEWICHT FROM AV_GEFUEHL_FORM WHERE GEFUEHL_ID = G.ID ORDER BY ID) LOOP
+      F.PUT(R.FORM, ROUND(R.GEWICHT * NVL(P_STAERKE, 1), 6));
+    END LOOP;
+    J.PUT('formen', F);
+    RETURN J.TO_STRING;
+  END;
+
+  -- ---------------------------------------------------------------------------------------------------
+  -- Metadaten, Protokoll, Prüfhilfe
+  -- ---------------------------------------------------------------------------------------------------
+  PROCEDURE ANMELDEN (P_TABELLE VARCHAR2, P_SPALTE VARCHAR2, P_ROLLE VARCHAR2 DEFAULT NULL, P_BEMERKUNG VARCHAR2 DEFAULT NULL) IS
+    S VARCHAR2(128) := SYS_CONTEXT('USERENV', 'SESSION_USER');
+  BEGIN
+    IF P_TABELLE IS NULL OR P_SPALTE IS NULL THEN RAISE_APPLICATION_ERROR(E_METADATEN, 'Tabelle und Spalte nötig'); END IF;
+    MERGE INTO AV_METADATA m
+    USING (SELECT S SCHEMA_NAME, UPPER(P_TABELLE) TABELLE, UPPER(P_SPALTE) SPALTE FROM DUAL) x
+       ON (m.SCHEMA_NAME = x.SCHEMA_NAME AND m.TABELLE = x.TABELLE AND m.SPALTE = x.SPALTE)
+     WHEN MATCHED THEN UPDATE SET m.ROLLE = P_ROLLE, m.BEMERKUNG = P_BEMERKUNG
+     WHEN NOT MATCHED THEN INSERT (SCHEMA_NAME, TABELLE, SPALTE, ROLLE, BEMERKUNG) VALUES (x.SCHEMA_NAME, x.TABELLE, x.SPALTE, P_ROLLE, P_BEMERKUNG);
+    LOG('angemeldet: ' || S || '.' || UPPER(P_TABELLE) || '.' || UPPER(P_SPALTE) || CASE WHEN P_ROLLE IS NULL THEN NULL ELSE ' (' || P_ROLLE || ')' END, 'INFO', 'AV_API.ANMELDEN');
+  END;
+
+  PROCEDURE ABMELDEN (P_TABELLE VARCHAR2, P_SPALTE VARCHAR2) IS
+  BEGIN
+    DELETE FROM AV_METADATA
+     WHERE SCHEMA_NAME = SYS_CONTEXT('USERENV', 'SESSION_USER') AND TABELLE = UPPER(P_TABELLE) AND SPALTE = UPPER(P_SPALTE);
+  END;
+
+  PROCEDURE LOG (P_TEXT VARCHAR2, P_STUFE VARCHAR2 DEFAULT 'INFO', P_QUELLE VARCHAR2 DEFAULT NULL) IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+  BEGIN
+    INSERT INTO AV_LOG (STUFE, QUELLE, TEXT) VALUES (NVL(P_STUFE, 'INFO'), SUBSTR(P_QUELLE, 1, 60), SUBSTR(P_TEXT, 1, 2000));
+    COMMIT;
+  END;
+
+  FUNCTION ZUFALL (P_SEED NUMBER, P_N PLS_INTEGER) RETURN VARCHAR2 IS
+    S VARCHAR2(4000);
+  BEGIN
+    RNG_INIT(P_SEED);
+    FOR I IN 1 .. LEAST(P_N, 100) LOOP
+      S := S || CASE WHEN I > 1 THEN ' ' END || TO_CHAR(SHR(RNG_LONG, 11));
+    END LOOP;
+    RETURN S;
+  END;
+
+END AV_API;
+/
+
+
+-- =====================================================================================================
+-- AV_KATALOG: die Kataloge zum Lesen (Cursor je Katalog, sortiert wie in der App). Dieselben Daten stehen in den
+-- Sichten AV_*_V (04_sichten.sql); das Package ist für Programme, die lieber eine Prozedur rufen.
+-- =====================================================================================================
+CREATE OR REPLACE PACKAGE AV_KATALOG AUTHID DEFINER AS
+  FUNCTION REGLER (P_GRUPPE VARCHAR2 DEFAULT NULL) RETURN SYS_REFCURSOR;
+  FUNCTION FRISUREN RETURN SYS_REFCURSOR;
+  FUNCTION FORMEN RETURN SYS_REFCURSOR;
+  FUNCTION VISEME RETURN SYS_REFCURSOR;
+  FUNCTION GEFUEHLE RETURN SYS_REFCURSOR;
+  FUNCTION GEFUEHL_FORMEN (P_NAME VARCHAR2) RETURN SYS_REFCURSOR;
+  FUNCTION POSEN RETURN SYS_REFCURSOR;
+  FUNCTION GESTEN RETURN SYS_REFCURSOR;
+  FUNCTION ROLLEN RETURN SYS_REFCURSOR;
+  FUNCTION EPOCHEN RETURN SYS_REFCURSOR;
+  FUNCTION STOFFE RETURN SYS_REFCURSOR;
+  FUNCTION KLEIDUNG RETURN SYS_REFCURSOR;
+  FUNCTION OUTFITS RETURN SYS_REFCURSOR;
+  FUNCTION OUTFIT_TEILE (P_NAME VARCHAR2) RETURN SYS_REFCURSOR;
+  FUNCTION PRESETS RETURN SYS_REFCURSOR;
+  FUNCTION DATEIEN RETURN SYS_REFCURSOR;
+  -- höchste Version eines Katalogs („AV_REGLER“ …), für den Abgleich mit dem Package (F37)
+  FUNCTION VERSION_VON (P_TABELLE VARCHAR2) RETURN NUMBER;
+END AV_KATALOG;
+/
+
+CREATE OR REPLACE PACKAGE BODY AV_KATALOG AS
+  FUNCTION REGLER (P_GRUPPE VARCHAR2 DEFAULT NULL) RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NAME, GRUPPE, BEZEICHNUNG, MIN_WERT, MAX_WERT, VORGABE, MORPHZIEL FROM AV_REGLER
+                   WHERE P_GRUPPE IS NULL OR GRUPPE = UPPER(P_GRUPPE) ORDER BY REIHENFOLGE; RETURN C; END;
+  FUNCTION FRISUREN RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NAME, BEZEICHNUNG, NETZ, LIZENZ FROM AV_FRISUR ORDER BY ID; RETURN C; END;
+  FUNCTION FORMEN RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NAME, GRUPPE, SEITE FROM AV_FORM ORDER BY ID; RETURN C; END;
+  FUNCTION VISEME RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NAME, LAUTE FROM AV_VISEM ORDER BY REIHENFOLGE; RETURN C; END;
+  FUNCTION GEFUEHLE RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NAME, VALENZ, ERREGUNG, KOPF_SENKEN, BLICK_SENKEN, KOPF_NEIGEN, SCHULTERN, LIDSCHLAG, ATEM_TAKT,
+                          ATEM_TIEFE, SAKKADEN, ABWENDEN FROM AV_GEFUEHL ORDER BY REIHENFOLGE; RETURN C; END;
+  FUNCTION GEFUEHL_FORMEN (P_NAME VARCHAR2) RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT f.FORM, f.GEWICHT FROM AV_GEFUEHL g JOIN AV_GEFUEHL_FORM f ON f.GEFUEHL_ID = g.ID
+                   WHERE g.NAME = P_NAME ORDER BY f.ID; RETURN C; END;
+  FUNCTION POSEN RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NAME, ART, BEZEICHNUNG FROM AV_POSE ORDER BY ID; RETURN C; END;
+  FUNCTION GESTEN RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NAME, BEZEICHNUNG, DAUER_S FROM AV_GESTE ORDER BY ID; RETURN C; END;
+  FUNCTION ROLLEN RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NAME, BEZEICHNUNG, KLEIDERART, EPOCHE, SZENE FROM AV_ROLLE ORDER BY ID; RETURN C; END;
+  FUNCTION EPOCHEN RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NAME, BEZEICHNUNG, VON_JAHR, BIS_JAHR FROM AV_EPOCHE ORDER BY ID; RETURN C; END;
+  FUNCTION STOFFE RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NAME, BEZEICHNUNG, RAUHEIT, FLAUM, BINDUNG, MASSSTAB, SAUGT, PERLEN, NASSGLANZ, FARBE_R, FARBE_G, FARBE_B
+                   FROM AV_STOFF ORDER BY ID; RETURN C; END;
+  FUNCTION KLEIDUNG RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NETZ, BEZEICHNUNG, ART, BIT, DATEI, LIZENZ FROM AV_KLEIDUNG ORDER BY BIT; RETURN C; END;
+  FUNCTION OUTFITS RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NAME, BEZEICHNUNG FROM AV_OUTFIT ORDER BY REIHENFOLGE; RETURN C; END;
+  FUNCTION OUTFIT_TEILE (P_NAME VARCHAR2) RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT t.NETZ, t.STOFF, t.FARBE_R, t.FARBE_G, t.FARBE_B FROM AV_OUTFIT o JOIN AV_OUTFIT_TEIL t ON t.OUTFIT_ID = o.ID
+                   WHERE o.NAME = P_NAME ORDER BY t.REIHENFOLGE; RETURN C; END;
+  FUNCTION PRESETS RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT p.NAME, p.PERSON, p.OUTFIT, p.BEMERKUNG, p.HERKUNFT FROM AV_PRESET p ORDER BY p.HERKUNFT DESC, p.NAME; RETURN C; END;
+  FUNCTION DATEIEN RETURN SYS_REFCURSOR IS C SYS_REFCURSOR;
+  BEGIN OPEN C FOR SELECT NAME, ART, SHA256, BYTES, FASSUNG, LIZENZ FROM AV_DATEI ORDER BY ID; RETURN C; END;
+  FUNCTION VERSION_VON (P_TABELLE VARCHAR2) RETURN NUMBER IS
+    V NUMBER;
+  BEGIN
+    IF NOT REGEXP_LIKE(UPPER(P_TABELLE), '^AV_[A-Z_]+$') THEN RETURN NULL; END IF;
+    EXECUTE IMMEDIATE 'SELECT MAX(VERSION) FROM ' || DBMS_ASSERT.SIMPLE_SQL_NAME(UPPER(P_TABELLE)) INTO V;
+    RETURN V;
+  EXCEPTION WHEN OTHERS THEN RETURN NULL;
+  END;
+END AV_KATALOG;
+/
+
+
+-- =====================================================================================================
+-- Rümpfe der Typen (01_typen.sql)
+-- =====================================================================================================
+CREATE OR REPLACE TYPE BODY AV_PERSON_T AS
+
+  MEMBER FUNCTION WERT (P_REGLER VARCHAR2) RETURN NUMBER IS
+    J JSON_OBJECT_T;
+    O JSON_OBJECT_T;
+  BEGIN
+    IF REGLER IS NULL THEN RETURN NULL; END IF;
+    J := JSON_OBJECT_T.PARSE(REGLER);
+    IF P_REGLER LIKE 'face.%' THEN
+      O := J.GET_OBJECT('face');
+      RETURN CASE WHEN O IS NOT NULL AND O.HAS(SUBSTR(P_REGLER, 6)) THEN O.GET_NUMBER(SUBSTR(P_REGLER, 6)) END;
+    ELSIF P_REGLER LIKE 'forms.%' THEN
+      O := J.GET_OBJECT('forms');
+      RETURN CASE WHEN O IS NOT NULL AND O.HAS(SUBSTR(P_REGLER, 7)) THEN O.GET_NUMBER(SUBSTR(P_REGLER, 7)) END;
+    END IF;
+    RETURN CASE WHEN J.HAS(P_REGLER) THEN J.GET_NUMBER(P_REGLER) END;
+  END;
+
+  MEMBER FUNCTION TEXT (P_REGLER VARCHAR2) RETURN VARCHAR2 IS
+    J JSON_OBJECT_T;
+  BEGIN
+    IF REGLER IS NULL THEN RETURN NULL; END IF;
+    J := JSON_OBJECT_T.PARSE(REGLER);
+    RETURN CASE WHEN J.HAS(P_REGLER) THEN J.GET_STRING(P_REGLER) END;
+  END;
+
+  MEMBER FUNCTION PRUEFEN RETURN VARCHAR2 IS
+  BEGIN
+    RETURN AV_API.PRUEFEN(SELF);
+  END;
+
+  MEMBER FUNCTION KURZ RETURN VARCHAR2 IS
+  BEGIN
+    RETURN NVL(NAME, 'Person') || ' (' || TO_CHAR(ALTER_J, 'FM990') || ' Jahre, ' ||
+           CASE WHEN GESCHLECHT >= 0.5 THEN 'männlich' ELSE 'weiblich' END || ', seed ' || SEED || ')';
+  END;
+
+  STATIC FUNCTION WUERFELN (P_SEED NUMBER) RETURN AV_PERSON_T IS
+  BEGIN
+    RETURN AV_API.WUERFELN(P_SEED);
+  END;
+
+END;
+/
+
+CREATE OR REPLACE TYPE BODY AV_ZUSTAND_T AS
+  MEMBER FUNCTION KURZ RETURN VARCHAR2 IS
+  BEGIN
+    RETURN NVL(GEFUEHL, 'ruhig') || CASE WHEN STAERKE IS NOT NULL THEN ' ' || TO_CHAR(STAERKE, 'FM0.00') END
+           || ', Blick ' || NVL(BLICK, 'frei') || ', ' || NVL(POSE, 'stehen') || CASE WHEN KAPUZE = 1 THEN ', Kapuze auf' END;
+  END;
+END;
+/
+
+-- Ende 03_api.sql

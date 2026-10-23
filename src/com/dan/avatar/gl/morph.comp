@@ -1,0 +1,25 @@
+#version 430 core
+// Morphs je Ecke: Ruhe = Grundform + Σ Gewicht · Differenz, Einträge nach Ziel geordnet
+// (gleiche Reihenfolge und gleiche Rechnung wie Body.mix auf dem Prozessor).
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) readonly buffer Base { float base[]; };
+layout(std430, binding = 1) readonly buffer Off { int off[]; };
+layout(std430, binding = 2) readonly buffer Tid { int tid[]; };
+layout(std430, binding = 3) readonly buffer Dlt { float dlt[]; };
+layout(std430, binding = 4) readonly buffer Wgt { float wgt[]; };
+layout(std430, binding = 5) writeonly buffer Rest { float rest[]; };
+uniform int uCount;
+void main() {
+    uint v = gl_GlobalInvocationID.x;
+    if (v >= uint(uCount)) return;
+    precise float x = base[v * 3u], y = base[v * 3u + 1u], z = base[v * 3u + 2u];
+    for (int e = off[v]; e < off[v + 1u]; e++) {
+        float w = wgt[tid[e]];
+        if (w != 0.0) {
+            x = x + w * dlt[e * 3];
+            y = y + w * dlt[e * 3 + 1];
+            z = z + w * dlt[e * 3 + 2];
+        }
+    }
+    rest[v * 3u] = x; rest[v * 3u + 1u] = y; rest[v * 3u + 2u] = z;
+}

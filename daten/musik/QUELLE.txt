@@ -1,0 +1,8 @@
+hush_little_baby.wav
+  aus templates/matthewmikemusic-hush-little-baby-the-mockingbird-swings-male-vocals-198398.mp3
+  (Pixabay, von Daniel bereitgestellt), umgewandelt mit ffmpeg: mono, 44,1 kHz, PCM 16 Bit.
+hush_little_baby.lrc
+  Liedtext: das traditionelle Wiegenlied „Hush, Little Baby“ (gemeinfrei); der Sänger kann davon abweichen.
+  Zeiten [G]: geschätzt aus Spektrogramm und Takt, nicht nach Gehör. Rechts vom | die Lautung in deutscher
+  Schreibung für den Mund.
+Weitere Lieder: WAV (PCM) hierher legen, gleichnamige .lrc daneben (ohne LRC: nur Takt, kein Singen).

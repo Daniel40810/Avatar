@@ -1,0 +1,66 @@
+ant -f C:\\Users\\Dan40810\\Documents\\NetBeansProjects\\Avatar -Dnb.internal.action.name=run.single -Djavac.includes=com/dan/avatarstudio/DbPruefung.java -Drun.class=com.dan.avatarstudio.DbPruefung run-single
+init:
+Deleting: C:\Users\Dan40810\Documents\NetBeansProjects\Avatar\build\built-jar.properties
+deps-jar:
+Updating property file: C:\Users\Dan40810\Documents\NetBeansProjects\Avatar\build\built-jar.properties
+Compiling 1 source file to C:\Users\Dan40810\Documents\NetBeansProjects\Avatar\build\classes
+compile-single:
+run-single:
+Avatar � Pr�fung der Datenbank (Phase 14)
+  ? Verbindung: AVATAR auf PDBORCL
+    ok 01_typen.sql: 0 Typen neu
+    ok 318 Anweisungen ausgef�hrt, 39 schon vorhanden
+    ok 19 Tabellen
+    ok 179 Spalten mit passendem Typ
+    ok 18 Sequenzen
+    ok 18 Trigger eingeschaltet und g�ltig
+    ok 1 Indizes
+    ok 7 Sichten g�ltig
+    ok Ausbaustufe 1
+    ok 52 AV_REGLER (Startdaten)
+    ok 7 AV_FRISUR (Startdaten)
+    ok 52 AV_FORM (Startdaten)
+    ok 15 AV_VISEM (Startdaten)
+    ok 11 AV_GEFUEHL (Startdaten)
+    ok 61 AV_GEFUEHL_FORM (Startdaten)
+    ok 8 AV_POSE (Startdaten)
+    ok 5 AV_GESTE (Startdaten)
+    ok 3 AV_EPOCHE (Startdaten)
+    ok 11 AV_ROLLE (Startdaten)
+    ok 8 AV_STOFF (Startdaten)
+    ok 15 AV_KLEIDUNG (Startdaten)
+    ok 7 AV_OUTFIT (Startdaten)
+    ok 21 AV_OUTFIT_TEIL (Startdaten)
+    ok 4 AV_PRESET (Startdaten)
+    ok 5 AV_DATEI (Startdaten)
+    ok W�rfel AV_API.WUERFELN(4711): Mann, 31 � 4711
+    ok Preset Regennacht gepr�ft: stimmt
+    ok Outfit im November drau�en: Strickkapuze
+    ok 8 PL/SQL-Einheiten g�ltig (Typen, AV_API, AV_KATALOG)
+    ok Rechte an die Rolle AVATAR_USER, 11 �ffentliche Synonyme
+    ok Package und Schema passen zusammen (5 Pr�fsummen)
+    alles in Ordnung
+  ? Einrichten: alles in Ordnung (318 Anweisungen, 2,2 s)
+  ? Noch einmal einrichten: alles in Ordnung (39 schon vorhanden, nichts gel�scht)
+  ? W�rfel: 1009 von 1009 seeds in PL/SQL und Java dieselbe Person (alle Regler, Frisur, Gesicht), 8,4 ms je Person
+  ? W�rfel: Namen gleich (1009 von 1009)
+  ? Zufallszahlen (SplitMix64) Bit f�r Bit gleich: 2980077492027385 3357536235007337 521370 �
+  ? Ableiten: �lter 100 von 100, Geschwister 100 von 100 wie in Java
+  ? �lter: 31,2 ? 51,3 Jahre, grau 0,000 ? 0,500
+  ? Outfit nach Monat, Kleiderart, Epoche und seed: 432 von 432 wie Outfit.forMonth
+  ? Rollen: W�rter im November �Strickkapuze�, H�ndler im Juli �Wikingerzeit�
+  ? Gef�hle: 11 von 11 als Mischung der Formen wie com.dan.avatar.Emotion
+  ? Pr�fen: gew�rfelte Person stimmt, Melanin 1,5 wird gemeldet (�melanin au�erhalb 0 � 1: 1,5�)
+  ? Eigene Fehlernummern: Wert au�erhalb ORA-20802, Gef�hl unbekannt ORA-20803
+  ? Presets: 4 in AV_PRESET, �Regennacht� ist die Frau im Regen aus Java (Outfit Strickkapuze)
+  ? Eigenes Preset speichern und lesen (EIGEN), mitgeliefertes bleibt unber�hrt
+  ? Ohne Datenbank: Preset als Datei, beim Verbinden �bernommen (1)
+  ? DEMO verbunden, AVATAR �ber �ffentliche Synonyme
+  ? Angemeldet: DEMO sieht �AV_PROBE_PERSON.PERSON (Wattf�hrer)� in USER_AV_METADATA, AVATAR sieht �DEMO.AV_PROBE_PERSON.PERSON� in ALL_AV_METADATA
+  ? Aus DEMO gelesen: seed 4711 ist in PL/SQL und Java dieselbe Person (Mann, 31 � 4711, Methode PRUEFEN: stimmt)
+  ? Aus DEMO: AV_API.AELTER(�, 30) ist Person.aelter(30)
+  ? Aus DEMO: Outfit des Wattf�hrers im November �Strickkapuze�
+  ? Aufger�umt: Probe-Tabelle in DEMO entfernt, abgemeldet
+
+22 Pr�fungen bestanden. Alles in Ordnung.
+BUILD SUCCESSFUL (total time: 17 seconds)

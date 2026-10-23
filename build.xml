@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- You may freely edit this file. See commented blocks below for -->
+<!-- some examples of how to customize the build. -->
+<!-- (If you delete it and reopen the project it will be recreated.) -->
+<!-- By default, only the Clean and Build commands use this build script. -->
+<!-- Commands such as Run, Debug, and Test only use this build script if -->
+<!-- the Compile on Save feature is turned off for the project. -->
+<!-- You can turn off the Compile on Save (or Deploy on Save) setting -->
+<!-- in the project's Project Properties dialog box.-->
+<project name="Avatar" default="default" basedir=".">
+    <description>Builds, tests, and runs the project Avatar.</description>
+    <import file="nbproject/build-impl.xml"/>
+    <!--
+
+    There exist several targets which are by default empty and which can be 
+    used for execution of your tasks. These targets are usually executed 
+    before and after some main targets. They are: 
+
+      -pre-init:                 called before initialization of project properties
+      -post-init:                called after initialization of project properties
+      -pre-compile:              called before javac compilation
+      -post-compile:             called after javac compilation
+      -pre-compile-single:       called before javac compilation of single file
+      -post-compile-single:      called after javac compilation of single file
+      -pre-compile-test:         called before javac compilation of JUnit tests
+      -post-compile-test:        called after javac compilation of JUnit tests
+      -pre-compile-test-single:  called before javac compilation of single JUnit test
+      -post-compile-test-single: called after javac compilation of single JUunit test
+      -pre-jar:                  called before JAR building
+      -post-jar:                 called after JAR building
+      -post-clean:               called after cleaning build products
+
+    (Targets beginning with '-' are not intended to be called on their own.)
+
+    Example of inserting an obfuscator after compilation could look like this:
+
+        <target name="-post-compile">
+            <obfuscate>
+                <fileset dir="${build.classes.dir}"/>
+            </obfuscate>
+        </target>
+
+    For list of available properties check the imported 
+    nbproject/build-impl.xml file. 
+
+
+    Another way to customize the build is by overriding existing main targets.
+    The targets of interest are: 
+
+      -init-macrodef-javac:     defines macro for javac compilation
+      -init-macrodef-junit:     defines macro for junit execution
+      -init-macrodef-debug:     defines macro for class debugging
+      -init-macrodef-java:      defines macro for class execution
+      -do-jar:                  JAR building
+      run:                      execution of project 
+      -javadoc-build:           Javadoc generation
+      test-report:              JUnit report generation
+
+    An example of overriding the target for project execution could look like this:
+
+        <target name="run" depends="Avatar-impl.jar">
+            <exec dir="bin" executable="launcher.exe">
+                <arg file="${dist.jar}"/>
+            </exec>
+        </target>
+
+    Notice that the overridden target depends on the jar target and not only on 
+    the compile target as the regular run target does. Again, for a list of available 
+    properties which you can use, check the target you are overriding in the
+    nbproject/build-impl.xml file. 
+
+    -->
+
+    <!-- ============================================================
+         Avatar: Werkbuch-Ziele
+         check-packages  übersetzt jedes Package einzeln (Paketvertrag Punkt 9)
+         check           Prüfklasse von Phase 1 ohne Fenster
+         statusbild      rechnet das Statusbild der laufenden Phase (Schnittstelle und Regie, Phase 13: Regiebuch „Am Steg“ im Kino) mit Video ohne Fenster
+         statusbild-mengen  Detailstufen und Mengen (Phase 12)
+         statusbild-bewegung  Bewegung (Phase 11)
+         statusbild-kleidung  Kleidung (Phase 10)
+         statusbild-portrait  Ein Gesicht im Regen mit zwei Fotos in 4K (Phase 9)
+         statusbild-umwelt  Nässe, Regen, Kälte (Phase 8)
+         statusbild-posen  Posen und Formtafel (Phase 3)
+         blender-glb     baut den Grundkörper in Blender zweimal und vergleicht
+         blender-haut    bereitet die Grundhäute vor (zweimal, mit Prüfsumme)
+         ============================================================ -->
+    <property name="avatar.packages" value="gltf,avatar,hair,portrait,voice,beat"/>
+    <property name="blender.exe" value="C:/Program Files/Blender Foundation/Blender 5.2/blender.exe"/>
+    <property name="statusbild" value="docs/status/Status_Phase3_Posen.png"/>
+    <property name="statustafel" value="docs/status/Status_Phase3.png"/>
+    <property name="statushaut" value="docs/status/Status_Phase4.png"/>
+    <property name="statusaugen" value="docs/status/Status_Phase5.png"/>
+    <property name="statushaare" value="docs/status/Status_Phase6.png"/>
+    <property name="statusleben" value="docs/status/Status_Phase7.png"/>
+    <property name="videoleben" value="docs/status/Status_Phase7.avi"/>
+    <property name="statusumwelt" value="docs/status/Status_Phase8.png"/>
+    <property name="statusportrait" value="docs/status/Status_Phase9.png"/>
+    <property name="statuskleidung" value="docs/status/Status_Phase10.png"/>
+    <property name="statusbewegung" value="docs/status/Status_Phase11.png"/>
+    <property name="videobewegung" value="docs/status/Status_Phase11.avi"/>
+    <property name="statusmengen" value="docs/status/Status_Phase12.png"/>
+    <property name="videomengen" value="docs/status/Status_Phase12.avi"/>
+    <property name="statusregie" value="docs/status/Status_Phase13.png"/>
+    <property name="videoregie" value="docs/status/Status_Phase13.avi"/>
+    <property name="statusdaten" value="docs/status/Status_Phase14.png"/>
+    <property name="statusgalerie" value="docs/status/Status_Phase15.png"/>
+    <property name="statussprechen" value="docs/status/Status_Phase16.png"/>
+    <property name="videosprechen" value="docs/status/Status_Phase16.avi"/>
+    <property name="statusmusik" value="docs/status/Status_Phase17.png"/>
+    <property name="videomusik" value="docs/status/Status_Phase17.avi"/>
+    <property name="statustanz" value="docs/status/Status_Phase18.png"/>
+    <property name="videotanz" value="docs/status/Status_Phase18.avi"/>
+    <property name="statusschliff" value="docs/status/Status_Phase19.png"/>
+
+    <path id="avatar.jogl">
+        <pathelement location="lib/jogl-all.jar"/>
+        <pathelement location="lib/gluegen-rt.jar"/>
+    </path>
+
+    <macrodef name="check-package">
+        <attribute name="name"/>
+        <attribute name="also" default="__keins__"/>
+        <sequential>
+            <delete dir="${build.dir}/check/@{name}" quiet="true"/>
+            <mkdir dir="${build.dir}/check/@{name}"/>
+            <javac srcdir="${src.dir}" destdir="${build.dir}/check/@{name}" includeantruntime="false"
+                   release="21" encoding="UTF-8" failonerror="true" fork="false">
+                <include name="com/dan/@{name}/**/*.java"/>
+                <include name="com/dan/@{also}/**/*.java"/>
+                <exclude name="com/dan/@{name}/demo/**"/>
+                <exclude name="com/dan/@{also}/demo/**"/>
+                <classpath refid="avatar.jogl"/>
+            </javac>
+            <!-- Demo darf zusätzlich FStyle.jar nutzen -->
+            <javac srcdir="${src.dir}" destdir="${build.dir}/check/@{name}" includeantruntime="false"
+                   release="21" encoding="UTF-8" failonerror="true" fork="false">
+                <include name="com/dan/@{name}/demo/**/*.java"/>
+                <classpath>
+                    <path refid="avatar.jogl"/>
+                    <pathelement location="lib/FStyle.jar"/>
+                    <pathelement location="${build.dir}/check/@{name}"/>
+                </classpath>
+            </javac>
+            <echo message="  com.dan.@{name}: grün"/>
+        </sequential>
+    </macrodef>
+
+    <target name="db-startdaten" depends="compile" description="db/sql/06_startdaten.sql aus dem Java-Code erzeugen (Phase 14)">
+        <java classname="com.dan.avatarstudio.DbStartdaten" fork="true" failonerror="true">
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <arg file="db/sql"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="db-pruefung" depends="compile" description="Datenbank AVATAR einrichten und prüfen (Java = PL/SQL, aus DEMO angemeldet; Phase 14)">
+        <java classname="com.dan.avatarstudio.DbPruefung" fork="true" failonerror="true">
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <arg file="."/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="check-packages" depends="init" description="Jedes Package einzeln übersetzen (Paketvertrag)">
+        <echo message="check-packages: ${avatar.packages}"/>
+        <check-package name="gltf"/>
+        <check-package name="avatar" also="gltf"/>
+        <check-package name="hair"/>
+        <check-package name="portrait"/>
+        <check-package name="voice"/>
+        <check-package name="beat"/>
+        <echo message="check-packages: alle grün"/>
+    </target>
+
+    <target name="check" depends="compile" description="Prüfungen ohne Fenster (Lader, Studio)">
+        <java classname="com.dan.gltf.demo.GltfCheck" fork="true" failonerror="true">
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+        <java classname="com.dan.avatarstudio.StudioCheck" fork="true" failonerror="true">
+            <jvmarg value="-Xmx3g"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <!-- Avatar Phase 15: die Packages des Avatars nach Lighthouse kopieren (Rückfluss; F22 A). -->
+    <property name="lighthouse.dir" value="../Lighthouse"/>
+    <target name="lighthouse-kopie" description="Kopiert gltf, avatar, hair, portrait, voice nach ${lighthouse.dir}/src/com/dan (gleich danach: ant check)">
+        <copy todir="${lighthouse.dir}/src/com/dan" overwrite="true" preservelastmodified="true">
+            <fileset dir="src/com/dan" includes="gltf/**,avatar/**,hair/**,portrait/**,voice/**"/>
+        </copy>
+    </target>
+
+    <target name="statusbild" depends="compile,check-packages" description="Statusbild der laufenden Phase (Phase 19: Schliff – Qualitätsstufen, Prüfungen, Dauerlauf, Grenzen)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--schliff"/>
+            <arg file="${statusschliff}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="dauerlauf" depends="compile" description="Dauerlauf: eine Stunde Studiozeit ohne Fenster (Personen, Wetter, Sprechen, Musik, Tanz, Trommel, Regiebuch, Qualitätsstufen); Protokoll docs/status/Dauerlauf_Phase19.txt (-Ddauerlauf.minuten=60)">
+        <mkdir dir="docs/status"/>
+        <property name="dauerlauf.minuten" value="60"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--dauerlauf"/>
+            <arg file="docs/status/Dauerlauf_Phase19.txt"/>
+            <arg value="${dauerlauf.minuten}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-tanz" depends="compile" description="Statusbild Phase 18 (30 s Tanz und 15 s Handtrommel zum Lied aus daten/musik, mit Video und Ton)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--tanz"/>
+            <arg file="${statustanz}"/>
+            <arg file="${videotanz}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-musik" depends="compile" description="Statusbild Phase 17 (Musik-Visual von einer Minute aus daten/musik, mit Video und Ton)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--musik"/>
+            <arg file="${statusmusik}"/>
+            <arg file="${videomusik}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-sprechen" depends="compile" description="Statusbild Phase 16 (Sprechen: ein Satz aus Text und einer zu einer WAV-Datei, mit Video und Ton)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--sprechen"/>
+            <arg file="${statussprechen}"/>
+            <arg file="${videosprechen}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-lighthouse" depends="lighthouse-kopie" description="Statusbild Phase 15 (der Wärter auf der Galerie in Lighthouse; übersetzt Lighthouse und lässt dort tools.Galeriebild laufen)">
+        <mkdir dir="docs/status"/>
+        <ant antfile="build.xml" dir="${lighthouse.dir}" target="compile" inheritall="false">
+            <property name="ohne.paketpruefung" value="true"/>
+        </ant>
+        <java classname="com.dan.lighthouse.tools.Galeriebild" fork="true" failonerror="true" dir="${lighthouse.dir}">
+            <jvmarg value="-Xmx4g"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="--enable-native-access=ALL-UNNAMED"/>
+            <arg file="${statusgalerie}"/>
+            <arg value="1920"/>
+            <arg value="MITTEL"/>
+            <classpath>
+                <pathelement location="${lighthouse.dir}/build/classes"/>
+                <fileset dir="${lighthouse.dir}/lib" includes="*.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-daten" depends="compile" description="Statusbild Phase 14 (Datenbank AVATAR, braucht db/db.properties und die Datenbank)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--daten"/>
+            <arg file="${statusdaten}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-regie" depends="compile" description="Statusbild Phase 13 ( Regiebuch „Am Steg“ im Kino, mit Video)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--steg"/>
+            <arg file="${statusregie}"/>
+            <arg file="${videoregie}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-mengen" depends="compile" description="Statusbild Phase 12 (Detailstufen und Mengen, mit Video)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--mengen"/>
+            <arg file="${statusmengen}"/>
+            <arg file="${videomengen}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-bewegung" depends="compile" description="Statusbild Phase 11 (Bewegung, mit Video)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--bewegung"/>
+            <arg file="${statusbewegung}"/>
+            <arg file="${videobewegung}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-kleidung" depends="compile" description="Statusbild Phase 10 (Kleidung)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--kleidung"/>
+            <arg file="${statuskleidung}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-portrait" depends="compile" description="Statusbild Phase 9 (Ein Gesicht im Regen, mit Fotos in 4K)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--portrait"/>
+            <arg file="${statusportrait}"/>
+            <arg file="docs/status"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-umwelt" depends="compile" description="Statusbild Phase 8 (Nässe, Regen, Kälte)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--umwelt"/>
+            <arg file="${statusumwelt}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-leben" depends="compile" description="Statusbild und Minutenvideo von Leben, Blick, Gefühl ohne Fenster (Phase 7)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--leben"/>
+            <arg file="${statusleben}"/>
+            <arg file="${videoleben}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-haare" depends="compile" description="Statusbild der Haare ohne Fenster (Phase 6)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--haare"/>
+            <arg file="${statushaare}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-augen" depends="compile" description="Statusbild der Augen ohne Fenster (Phase 5)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--augen"/>
+            <arg file="${statusaugen}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-haut" depends="compile" description="Statusbild der Haut ohne Fenster (Phase 4)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--haut"/>
+            <arg file="${statushaut}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="statusbild-posen" depends="compile" description="Statusbilder ohne Fenster (Posen, Formtafel; Phase 3)">
+        <mkdir dir="docs/status"/>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--bild"/>
+            <arg file="${statusbild}"/>
+            <arg value="1600"/>
+            <arg value="900"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+        <java classname="com.dan.avatarstudio.AvatarStudio" fork="true" failonerror="true">
+            <jvmarg line="${run.jvmargs}"/>
+            <jvmarg value="-Dstdout.encoding=UTF-8"/>
+            <jvmarg value="-Xmx3g"/>
+            <arg value="--tafel"/>
+            <arg file="${statustafel}"/>
+            <classpath>
+                <path path="${run.classpath}"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="blender-haut" description="Grundhäute vorbereiten (zweimal, mit Prüfsumme)">
+        <exec executable="${blender.exe}" failonerror="true">
+            <arg value="-b"/>
+            <arg value="-P"/>
+            <arg file="tools/blender/haut_build.py"/>
+            <arg value="--"/>
+            <arg value="--twice"/>
+        </exec>
+    </target>
+
+    <target name="blender-glb" description="Grundkörper in Blender bauen (zweimal, mit Prüfsumme)">
+        <exec executable="${blender.exe}" failonerror="true">
+            <arg value="-b"/>
+            <arg value="-P"/>
+            <arg file="tools/blender/avatar_build.py"/>
+            <arg value="--"/>
+            <arg value="--twice"/>
+        </exec>
+    </target>
+</project>

@@ -1,0 +1,28 @@
+Lass uns mal einen Prompt entwickeln, aus dem wir später ein Werkbuch erstellen können.
+Ich möchte mit OpenGl einen universal einsetzbaren Avatar erstellen, der auch in unseren
+bisher erstellten Projecten nutzbar sein sollte. Ich habe unter templates mal eine Kostprobe
+abgelegt. Inspiriert hat mich auch Youtube("The Emberheart Project", "DjVonk" oder "MarFluxMusic").
+Avatare sollen männlich wie auch weiblich sein. Lass uns erstmal gemeinsam Gedanken machen, was der Avatar
+an Eigenschaften und Fähigkeiten mitbringen muss. Daraus einen Prompt erstellen,
+der Grundlage zum Anlegen eines Werkbuchs sein sollte.
+
+[OFFEN] Herkunft der Geometrie – das ist die größte Weichenstellung:
+A) Grundkörper aus Blender (MPFB2/MakeHuman, CC0) mit Morphs und Skelett, Export als glTF, eigener Lader in Java; Haut, Augen, Haare, Animation, Licht = eigener Code.
+B) Alles prozedural in Java wie figure – ganz eigen, erreicht aber den Vorlagen-Look kaum.
+C) Fremde fertige Figuren (z. B. Character-Creator-Assets) – Lizenzfragen, wenig „eigen“.
+-- A Blender bereit
+[OFFEN] Schwerpunkt: zuerst das Porträt (Vorlage) oder zuerst die ganze Figur in einer Szene?
+-- entscheide du was mehr Sinn ergibt
+[OFFEN] Musik: fühlen und singen, tanzen, Instrument?
+-- schön, wenn es das auch kann
+[OFFEN] Tonquelle für Lippen und Musik.
+-- schön, wenn es das auch kann, nicht primär.
+[OFFEN] Datenbank: eigenes Schema (z. B. AVATAR) für Personen, Kleidung, Ausdrücke, Liedtexte?
+-- Neues leeres Schema angelegt, sollten wir wie mdsys anlegen, sodass wir Schema Projectübergreifend nutzen können.
+BEGIN
+    -- Oracle21C
+	-- Servicename: "PDBORCL"
+    -- ROLE: "DB_CONNECT"
+	-- Schema anlegen (Schemaname, Password)
+		manage_user('Avatar', 'av');
+END;

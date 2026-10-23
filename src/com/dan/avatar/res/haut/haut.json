@@ -1,0 +1,63 @@
+{
+ "groesse": 2048,
+ "guete": 92,
+ "haeute": [
+  {
+   "bytes": 542096,
+   "datei": "young_lightskinned_female_diffuse.png",
+   "mpfb": "young_caucasian_female",
+   "quelle_sha256": "b2a6ac8cd4f9febdb447368e29c76cd68410bb66e46d9dcfa2d5f75126eea8fc",
+   "schluessel": "jung_w",
+   "sha256": "6631313abac123b42464d15d9a7bd0bc677605df42b53c6b62c9869ac818549e",
+   "ziel": "haut_jung_w.jpg"
+  },
+  {
+   "bytes": 547417,
+   "datei": "young_lightskinned_male_diffuse.png",
+   "mpfb": "young_caucasian_male",
+   "quelle_sha256": "862a26e335e958b70534cb5f0d7c47ef30ab148a56c42b3e9da969cf76f12963",
+   "schluessel": "jung_m",
+   "sha256": "adc784bca952d602683d2db7e3b816f0aa9da739660780cf9d932ba1babd10ef",
+   "ziel": "haut_jung_m.jpg"
+  },
+  {
+   "bytes": 518439,
+   "datei": "middleage_lightskinned_female_diffuse.png",
+   "mpfb": "middleage_caucasian_female",
+   "quelle_sha256": "bcb9c2c8ace23880bc4407602a249abbcf4608b6ba0894e423b031913012a363",
+   "schluessel": "mittel_w",
+   "sha256": "fdae1026e23b74980c21418ebc6a325fcbf44055866c5c9201e214f59f1b5419",
+   "ziel": "haut_mittel_w.jpg"
+  },
+  {
+   "bytes": 522697,
+   "datei": "middleage_lightskinned_male_diffuse.png",
+   "mpfb": "middleage_caucasian_male",
+   "quelle_sha256": "3f94f3f6a5cab92dedf5cce392a87332312fc435f1cb44c6e7b897daef9a5fbb",
+   "schluessel": "mittel_m",
+   "sha256": "77231cdf8cb49140cb455e49628e16c04ae896cb43e67e4e27a561269049a667",
+   "ziel": "haut_mittel_m.jpg"
+  },
+  {
+   "bytes": 662348,
+   "datei": "old_lightskinned_female_diffuse.png",
+   "mpfb": "old_caucasian_female",
+   "quelle_sha256": "00c45246c145562b917371e92de44a1fe394bc5f4bd91418addf24b6adff5e9d",
+   "schluessel": "alt_w",
+   "sha256": "7634152de73d1aa4bd05b23805bc177900b117a47330a4ba207bb0241933be85",
+   "ziel": "haut_alt_w.jpg"
+  },
+  {
+   "bytes": 711847,
+   "datei": "old_lightskinned_male_diffuse.png",
+   "mpfb": "old_caucasian_male",
+   "quelle_sha256": "dfb2310ed3e0ad024ea7a3ad321215e2e9e2994cca64043d9f3d07c6543ec847",
+   "schluessel": "alt_m",
+   "sha256": "a6f768e4cdffe529c586c0f8bb49af4b39b06eabde55d5c0633f94513f5543aa",
+   "ziel": "haut_alt_m.jpg"
+  }
+ ],
+ "lizenz": "CC0 1.0 (MakeHuman-Systempakete)",
+ "quelle": "C:\\Users\\Dan40810\\AppData\\Roaming\\Blender Foundation\\Blender\\5.2\\extensions\\.user\\blender_org\\mpfb\\data\\skins",
+ "version": "1.0"
+}

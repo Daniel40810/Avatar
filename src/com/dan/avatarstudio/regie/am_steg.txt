@@ -1,0 +1,56 @@
+# Regiebuch „Am Steg“ (Avatar Phase 13, Abnahme): Ankommen, Kapuze ab, Blick zum Wasser, zur Kamera, Abgang.
+# Jede Zeile ein Stichwort; der Teil nach „ | “ ist der Untertitel. Befehle mit Namen vor dem Punkt gehen an die Person.
+titel   Am Steg | Eine Regennacht am Wasser
+abspann Mara | eine erfundene Frau (Vorlage „Frau im Regen“, seed 11)
+abspann Kamera | com.dan.avatarstudio.CameraRig
+abspann Regie | com.dan.avatar.Regie · Kino aus com.dan.kino
+abspann Werkbuch | Avatar · Phase 13
+
+szene   Steg
+wetter  Regennacht nass=12
+bild    an farbe=Regennacht blende=2,8
+person  mara Strickkapuze vorlage=frau ort=Ufer dreh=Steg_Ende
+kamera  Totale
+warte   vorspann
+
+# Ankommen
+mara.gehe      Steg_Ende 0.85 | Jeden Abend, wenn die Laternen angehen, kommt sie hierher.
+warte   4 s
+kamera  Halbtotale mara winkel=25 folgt=ja
+warte   7 s
+kamera  Amerikanisch mara winkel=-20 folgt=ja
+warte   mara.gehe
+mara.dreh      Wasser
+kamera  Halbnah mara winkel=35 folgt=ja
+warte   mara.dreh
+
+# Kapuze ab, Blick zum Wasser
+mara.geste     Kapuze_ab
+warte   mara.geste
+mara.blick     Wasser
+mara.gefuehl   nachdenklich 0.7 | Draußen liegt die Boje, wie immer.
+warte   mara.blick
+kamera  Nah mara winkel=-30 folgt=ja
+warte   6 s
+
+# zur Kamera
+mara.blick     Kamera
+mara.gefuehl   ruhig 0.8
+kamera  Nah mara winkel=6 folgt=ja
+warte   mara.blick
+warte   2 s
+mara.sage      "Heute Nacht bleibt das Licht an."
+warte   mara.sage
+warte   1.5 s
+
+# Abgang
+mara.geste     Kapuze_auf
+kamera  Halbnah mara winkel=40 folgt=ja
+warte   mara.geste
+mara.blick     frei
+mara.gehe      Ufer 0.9
+kamera  Halbtotale mara winkel=165 folgt=ja
+warte   5 s
+kamera  Totale
+warte   mara.gehe
+warte   2 s

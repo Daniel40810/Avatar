@@ -1,0 +1,23 @@
+#version 430 core
+// Eckennormale: Summe der Dreiecke ihrer Blender-Ecke (über UV-Nähte geglättet), normiert.
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) readonly buffer TriN { float triN[]; };
+layout(std430, binding = 1) readonly buffer Weld { int weld[]; };
+layout(std430, binding = 2) readonly buffer GOff { int gOff[]; };
+layout(std430, binding = 3) readonly buffer GTri { int gTri[]; };
+layout(std430, binding = 4) readonly buffer BaseN { float baseN[]; };
+layout(std430, binding = 5) writeonly buffer RestN { float restN[]; };
+uniform int uCount;
+void main() {
+    uint v = gl_GlobalInvocationID.x;
+    if (v >= uint(uCount)) return;
+    int g = weld[v];
+    vec3 s = vec3(0.0);
+    for (int e = gOff[g]; e < gOff[g + 1]; e++) {
+        int k = gTri[e];
+        s += vec3(triN[k * 3], triN[k * 3 + 1], triN[k * 3 + 2]);
+    }
+    float l = length(s);
+    vec3 n = l > 1e-20 ? s / l : vec3(baseN[v * 3u], baseN[v * 3u + 1u], baseN[v * 3u + 2u]);
+    restN[v * 3u] = n.x; restN[v * 3u + 1u] = n.y; restN[v * 3u + 2u] = n.z;
+}

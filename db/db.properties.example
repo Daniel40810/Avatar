@@ -1,0 +1,7 @@
+# Zugang zur Oracle-Datenbank (Schema AVATAR, Dienst PDBORCL), angelegt mit manage_user('Avatar', …) (docs/Anweisung.txt).
+# Diese Datei nach db.properties kopieren; db.properties kommt nie ins Git.
+url=jdbc:oracle:thin:@//localhost:1521/PDBORCL
+user=Avatar
+# Das Passwort kann hier leer bleiben. Dann fragt das Avatar Studio (Block DATEN) danach und trägt es nach dem
+# erfolgreichen Verbinden in db.properties ein (Klartext). Alternativ aus der Umgebungsvariablen AVATAR_DB_PASSWORD.
+password=

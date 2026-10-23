@@ -1,0 +1,17 @@
+# Avatar
+build/
+dist/
+nbproject/private/
+db/db.properties
+*.log
+# Grundkörper (140 MB, über der Grenze von GitHub): ant blender-glb baut ihn neu
+src/com/dan/avatar/res/avatar_base.glb
+# Zwischenspeicher und Proben
+daten/cache/
+daten/probe/
+# Lieder (Lizenz von Pixabay: nicht weiterverbreiten) und eigene Aufnahmen
+daten/musik/*.wav
+daten/sprache/ich_*
+# Videos der Statusbilder (groß); die PNG bleiben
+docs/status/*.avi
+docs/fotos/

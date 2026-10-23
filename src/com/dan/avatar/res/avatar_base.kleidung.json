@@ -1,0 +1,123 @@
+{
+ "fassung": "1.7",
+ "hinweis": "Bit je Kleidungsstueck im Merkmal _VERDECKT des Koerpers",
+ "teile": [
+  {
+   "netz": "male_casualsuit01",
+   "datei": "male_casualsuit01.mhclo",
+   "bit": 0,
+   "lizenz": "CC0",
+   "gruppen": [
+    "Delete.male_casualsuit01"
+   ]
+  },
+  {
+   "netz": "sweater_fisherman",
+   "datei": "toigo_fisherman_sweater.mhclo",
+   "bit": 1,
+   "lizenz": "CC0",
+   "gruppen": []
+  },
+  {
+   "netz": "Monks_Hood",
+   "datei": "donitz_monk_robe_hood.mhclo",
+   "bit": 2,
+   "lizenz": ": CC0",
+   "gruppen": []
+  },
+  {
+   "netz": "Monks_Hood_Down",
+   "datei": "donitz_monk_robe_hood_down.mhclo",
+   "bit": 3,
+   "lizenz": ": CC0",
+   "gruppen": []
+  },
+  {
+   "netz": "Monks_Robe",
+   "datei": "donitz_monk_robe.mhclo",
+   "bit": 4,
+   "lizenz": ": CC0",
+   "gruppen": [
+    "Delete.donitz_monk_robe"
+   ]
+  },
+  {
+   "netz": "pants_wool",
+   "datei": "toigo_wool_pants.mhclo",
+   "bit": 5,
+   "lizenz": "CC0",
+   "gruppen": []
+  },
+  {
+   "netz": "cargo_pants",
+   "datei": "cortu_cargo_pants.mhclo",
+   "bit": 6,
+   "lizenz": "CC0",
+   "gruppen": []
+  },
+  {
+   "netz": "jean_shorts",
+   "datei": "cortu_jeans_shorts.mhclo",
+   "bit": 7,
+   "lizenz": "CC0",
+   "gruppen": [
+    "Delete.cortu_jeans_shorts"
+   ]
+  },
+  {
+   "netz": "t_shirt_basic_tucked",
+   "datei": "toigo_basic_tucked_t-shirt.mhclo",
+   "bit": 8,
+   "lizenz": "CC0",
+   "gruppen": []
+  },
+  {
+   "netz": "boots_ankle",
+   "datei": "toigo_ankle_boots_female.mhclo",
+   "bit": 9,
+   "lizenz": "CC0",
+   "gruppen": [
+    "Delete.toigo_ankle_boots_female"
+   ]
+  },
+  {
+   "netz": "hero_boots_2",
+   "datei": "culturalibre_hero_boots_2.mhclo",
+   "bit": 10,
+   "lizenz": "CC-0",
+   "gruppen": [
+    "Delete.culturalibre_hero_boots_2"
+   ]
+  },
+  {
+   "netz": "mj_shoes",
+   "datei": "toigo_mj_cloth_shoes.mhclo",
+   "bit": 11,
+   "lizenz": "CC0",
+   "gruppen": [
+    "Delete.toigo_mj_cloth_shoes"
+   ]
+  },
+  {
+   "netz": "tunicviking",
+   "datei": "rehmanpolanski_viking_tunic.mhclo",
+   "bit": 12,
+   "lizenz": "CC0",
+   "gruppen": []
+  },
+  {
+   "netz": "pantsviking",
+   "datei": "rehmanpolanski_viking_pants.mhclo",
+   "bit": 13,
+   "lizenz": "CC0",
+   "gruppen": []
+  },
+  {
+   "netz": "bootsviking",
+   "datei": "rehmanpolanski_viking_boots.mhclo",
+   "bit": 14,
+   "lizenz": "CC0",
+   "gruppen": []
+  }
+ ]
+}

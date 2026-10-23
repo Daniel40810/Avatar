@@ -1,0 +1,69 @@
+#version 430 core
+// Skinning je Ecke, bis 4 Gelenke: Dual-Quaternion (Volumenerhalt, Kavan 2007; Vorzeichen nach
+// der laufenden Summe wie Blender) oder linear. Schreibt direkt in die Zeichenpuffer.
+// Gleiche Rechnung wie Dq.skin und Dq.linear in Java.
+layout(local_size_x = 64) in;
+layout(std430, binding = 0) readonly buffer RP { float rp[]; };
+layout(std430, binding = 1) readonly buffer RN { float rn[]; };
+layout(std430, binding = 2) readonly buffer Jn { int jn[]; };
+layout(std430, binding = 3) readonly buffer Wt { float wt[]; };
+layout(std430, binding = 4) readonly buffer DQ { float dq[]; };
+layout(std430, binding = 5) readonly buffer MT { float mt[]; };
+layout(std430, binding = 6) writeonly buffer OP { float op[]; };
+layout(std430, binding = 7) writeonly buffer ON { float on[]; };
+layout(std430, binding = 8) readonly buffer FX { float fx[]; };   // Lose je Ecke (Phase 10)
+uniform int uCount;
+uniform int uFlexOn;
+uniform vec3 uSway, uFlutter;   // Nachbewegung loser Teile (Figur-Koordinaten, m)
+uniform float uTime;
+uniform int uMode;      // 1 Dual-Quaternion, 0 linear, 2 ohne Skin
+vec3 qrot(vec4 q, vec3 v) {
+    vec3 c = cross(q.xyz, v) + q.w * v;
+    return v + 2.0 * cross(q.xyz, c);
+}
+void main() {
+    uint v = gl_GlobalInvocationID.x;
+    if (v >= uint(uCount)) return;
+    vec3 p = vec3(rp[v * 3u], rp[v * 3u + 1u], rp[v * 3u + 2u]);
+    vec3 n = vec3(rn[v * 3u], rn[v * 3u + 1u], rn[v * 3u + 2u]);
+    vec3 P = p, N = n;
+    if (uMode == 1) {
+        vec4 r = vec4(0.0), d = vec4(0.0);
+        for (int k = 0; k < 4; k++) {
+            float w = wt[v * 4u + uint(k)];
+            if (w == 0.0) continue;
+            int j = jn[v * 4u + uint(k)] * 8;
+            vec4 q = vec4(dq[j], dq[j + 1], dq[j + 2], dq[j + 3]);
+            if (dot(r, q) < 0.0) w = -w;
+            r += w * q;
+            d += w * vec4(dq[j + 4], dq[j + 5], dq[j + 6], dq[j + 7]);
+        }
+        float l = length(r);
+        if (l < 1e-12) { r = vec4(0, 0, 0, 1); l = 1.0; }
+        r /= l; d /= l;
+        vec3 t = 2.0 * (r.w * d.xyz - d.w * r.xyz + cross(r.xyz, d.xyz));
+        P = qrot(r, p) + t;
+        N = qrot(r, n);
+    } else if (uMode == 0) {
+        P = vec3(0.0); N = vec3(0.0);
+        for (int k = 0; k < 4; k++) {
+            float w = wt[v * 4u + uint(k)];
+            if (w == 0.0) continue;
+            int j = jn[v * 4u + uint(k)] * 12;
+            mat3 m = mat3(mt[j], mt[j + 1], mt[j + 2], mt[j + 3], mt[j + 4], mt[j + 5], mt[j + 6], mt[j + 7], mt[j + 8]);
+            vec3 t = vec3(mt[j + 9], mt[j + 10], mt[j + 11]);
+            P += w * (m * p + t);
+            N += w * (m * n);
+        }
+        float l = length(N);
+        if (l > 0.0) N /= l;
+    }
+    if (uFlexOn == 1) {
+        // lose Teile: Feder und Flattern, die Welle läuft über den Stoff (keine Simulation, F11 A)
+        float f = fx[v];
+        float ph = dot(p, vec3(7.0, 11.0, 5.0));
+        P += f * (uSway + uFlutter * vec3(sin(uTime * 6.3 + ph), sin(uTime * 4.1 + ph * 1.3), sin(uTime * 7.7 + ph * 0.7)));
+    }
+    op[v * 3u] = P.x; op[v * 3u + 1u] = P.y; op[v * 3u + 2u] = P.z;
+    on[v * 3u] = N.x; on[v * 3u + 1u] = N.y; on[v * 3u + 2u] = N.z;
+}
